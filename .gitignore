@@ -1,0 +1,5 @@
+.env
+venv/
+.venv/
+project/deep_cognitive_agent/venv/  # Just to be safe
+__pycache__/
