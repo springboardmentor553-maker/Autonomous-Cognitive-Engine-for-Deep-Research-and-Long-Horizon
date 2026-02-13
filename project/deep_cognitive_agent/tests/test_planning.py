@@ -5,11 +5,11 @@ This script tests the ReAct planning agent with 5 complex inputs
 and saves the generated todos to outputs/*.json files.
 
 Test Inputs:
-1. Comparative study of EV vs Hydrogen vehicles
-2. Build an AI chatbot architecture
-3. Stock market research strategy
-4. Renewable energy research outline
-5. AI agents in healthcare report
+1. Create a research outline for renewable energy trends
+2. Design a structured learning roadmap for data science
+3. Break down the steps for developing a web application
+4. Plan a comparative study between electric and hydrogen vehicles
+5. Create a technical writing outline for AI ethics
 """
 
 import os
@@ -27,18 +27,18 @@ load_dotenv()
 
 # Enable LangSmith Tracing
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "Milestone1-Planning")
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
 
 from app import create_planning_agent, run_agent, save_result_to_json
 
 
-# Test inputs as specified
+# Test inputs — 5 complex tasks as specified in Milestone 1
 TEST_INPUTS = [
-    "Comparative study of EV vs Hydrogen vehicles",
-    "Build an AI chatbot architecture",
-    "Stock market research strategy",
-    "Renewable energy research outline",
-    "AI agents in healthcare report"
+    "Create a research outline for renewable energy trends",
+    "Design a structured learning roadmap for data science",
+    "Break down the steps for developing a web application",
+    "Plan a comparative study between electric and hydrogen vehicles",
+    "Create a technical writing outline for AI ethics",
 ]
 
 
