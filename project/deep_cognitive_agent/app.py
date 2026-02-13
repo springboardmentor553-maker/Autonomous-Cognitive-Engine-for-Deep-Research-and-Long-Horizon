@@ -3,7 +3,7 @@ Main Application - Milestone 1: ReAct Planning Agent
 
 This implements a strict planning agent that:
 - MUST call write_todos tool first for any complex task
-- Uses LLM dynamically to generate TODO steps
+- Uses Groq (Llama 3.3 70B free tier) to dynamically generate TODO steps
 - Stores todos in LangGraph state
 - Never answers directly without planning first
 - Has LangSmith tracing enabled
@@ -14,15 +14,15 @@ import json
 from typing import List, Dict
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file BEFORE any LangChain imports
 load_dotenv()
 
 # Enable LangSmith Tracing
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "Milestone1-Planning")
+os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
 
-from langchain_openai import ChatOpenAI
-from langchain.tools import Tool
+from langchain_groq import ChatGroq
+from langchain_core.tools import Tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -31,40 +31,47 @@ from tools.planning.write_todos import write_todos, planning_prompt
 from graphs.state import AgentState
 
 
-# Initialize LLM
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
+# Initialize LLM (Groq free tier - Llama 3.3 70B)
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    temperature=0,
+    groq_api_key=os.getenv("GROQ_API_KEY"),
+)
 
 
 # Create the write_todos tool with strong description
 write_todos_tool = Tool(
     name="write_todos",
     func=write_todos,
-    description="""
-Use this tool whenever the user gives a complex task or request.
-This tool MUST be called FIRST before doing anything else.
-It breaks down the task into structured, actionable TODO steps.
-DO NOT attempt to answer the user directly - always use this tool first.
-Input: The complex task description as a string.
-Output: A list of structured TODO items with task and status fields.
-"""
+    description=(
+        "Use this tool to decompose complex tasks into structured to-do lists "
+        "before any execution. This tool MUST be called for complex tasks. "
+        "Input: The complex task description as a string. "
+        "Output: A dict with a 'todos' key containing a list of structured "
+        "TODO items, each with 'task' and 'status' fields."
+    ),
 )
 
 
-# System prompt that enforces tool usage
-SYSTEM_PROMPT = """You are a strict planning agent.
+# ── System prompt — enforces strict ReAct planning discipline ──
+SYSTEM_PROMPT = """You are a strict ReAct planning agent for Milestone 1.
 
-IMPORTANT RULES:
-1. You MUST call the write_todos tool FIRST for ANY user request.
-2. NEVER answer the user directly without calling write_todos first.
-3. The write_todos tool will break down the task into actionable steps.
-4. After calling write_todos, report the generated plan to the user.
-5. Do not skip the planning step under any circumstances.
+ABSOLUTE RULES — you must follow every one of these without exception:
 
-When a user gives you a task:
-1. Immediately call write_todos with the task
-2. Present the generated TODO list to the user
-3. Do not add your own analysis without using the tool first
-"""
+1. For ANY complex task the user gives you, you MUST call the write_todos tool FIRST.
+2. You MUST NOT answer the user directly or generate your own list of steps.
+3. You MUST NOT skip planning or attempt to execute any task.
+4. Milestone 1 only requires decomposition into structured todos — do NOT execute tasks.
+5. After calling write_todos, report the structured TODO list returned by the tool.
+   Do NOT add, remove, or reword the steps.
+
+ReAct discipline:
+  - THINK: reason briefly about what tool to call.
+  - ACT: call write_todos with the user's task.
+  - OBSERVE: read the structured todos returned.
+  - RESPOND: present the todos to the user exactly as returned.
+
+If the write_todos tool is not called, the response is INVALID."""
 
 
 def create_planning_agent():
@@ -73,13 +80,14 @@ def create_planning_agent():
     """
     # Create memory saver for checkpointing (optional but useful)
     memory = MemorySaver()
-    
-    # Create the ReAct agent
+
+    # Create the ReAct agent. The system behavior is injected later as a
+    # system message when we call the agent, since this version of
+    # create_react_agent no longer accepts system_prompt/state_modifier.
     agent = create_react_agent(
         model=llm,
         tools=[write_todos_tool],
         checkpointer=memory,
-        state_modifier=SYSTEM_PROMPT
     )
     
     return agent
@@ -100,8 +108,10 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
     # Configuration for the agent run
     config = {"configurable": {"thread_id": thread_id}}
     
-    # Input message
-    input_message = {"messages": [("user", task)]}
+    # Input messages: include a system message so the agent is
+    # instructed to ALWAYS call write_todos first and never answer
+    # directly.
+    input_message = {"messages": [("system", SYSTEM_PROMPT), ("user", task)]}
     
     # Run the agent and collect the final state
     final_state = None
@@ -116,16 +126,28 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
                 # Check if this is a tool message from write_todos
                 if hasattr(msg, 'name') and msg.name == "write_todos":
                     try:
-                        # Parse the tool output
                         content = msg.content
                         if isinstance(content, str):
-                            # Try to parse as JSON if it's a string representation
-                            todos = eval(content) if content.startswith('[') else []
-                        elif isinstance(content, list):
-                            todos = content
-                    except:
+                            parsed = json.loads(content)
+                        elif isinstance(content, dict):
+                            parsed = content
+                        else:
+                            parsed = {}
+
+                        # Handle {"todos": [...]} format from write_todos
+                        if isinstance(parsed, dict) and "todos" in parsed:
+                            todos = parsed["todos"]
+                        elif isinstance(parsed, list):
+                            todos = parsed
+                    except (json.JSONDecodeError, TypeError):
                         pass
     
+    # If we successfully extracted todos, also attach them to the
+    # underlying LangGraph state object so that state["todos"] is
+    # populated in addition to our returned result dictionary.
+    if final_state is not None and todos:
+        final_state["todos"] = todos
+
     # Build result
     result = {
         "task": task,
