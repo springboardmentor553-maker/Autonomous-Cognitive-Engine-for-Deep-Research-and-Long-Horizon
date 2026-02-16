@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 .venv/
 **/__pycache__/
 project/deep_cognitive_agent/.env
 project/deep_cognitive_agent/outputs/
+=======
+.env
+venv/
+.venv/
+project/deep_cognitive_agent/venv/  # Just to be safe
+__pycache__/
+>>>>>>> milestone-1-planner

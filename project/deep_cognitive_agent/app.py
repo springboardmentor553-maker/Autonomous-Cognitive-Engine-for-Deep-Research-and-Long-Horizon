@@ -3,7 +3,11 @@ Main Application - Milestone 1: ReAct Planning Agent
 
 This implements a strict planning agent that:
 - MUST call write_todos tool first for any complex task
+<<<<<<< HEAD
 - Uses Groq (Llama 3.3 70B free tier) to dynamically generate TODO steps
+=======
+- Uses LLM dynamically to generate TODO steps
+>>>>>>> milestone-1-planner
 - Stores todos in LangGraph state
 - Never answers directly without planning first
 - Has LangSmith tracing enabled
@@ -11,6 +15,7 @@ This implements a strict planning agent that:
 
 import os
 import json
+<<<<<<< HEAD
 from typing import List, Dict
 from dotenv import load_dotenv
 
@@ -22,6 +27,21 @@ os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
 os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
 
 from langchain_groq import ChatGroq
+=======
+import ast
+import time
+from typing import List, Dict
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Enable LangSmith Tracing
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "Milestone1-Planning")
+
+# from langchain_openai import ChatOpenAI
+>>>>>>> milestone-1-planner
 from langchain_core.tools import Tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
@@ -31,18 +51,25 @@ from tools.planning.write_todos import write_todos, planning_prompt
 from graphs.state import AgentState
 
 
+<<<<<<< HEAD
 # Initialize LLM (Groq free tier - Llama 3.3 70B)
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     temperature=0,
     groq_api_key=os.getenv("GROQ_API_KEY"),
 )
+=======
+# Initialize LLM
+from langchain_google_genai import ChatGoogleGenerativeAI
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+>>>>>>> milestone-1-planner
 
 
 # Create the write_todos tool with strong description
 write_todos_tool = Tool(
     name="write_todos",
     func=write_todos,
+<<<<<<< HEAD
     description=(
         "Use this tool to decompose complex tasks into structured to-do lists "
         "before any execution. This tool MUST be called for complex tasks. "
@@ -72,6 +99,34 @@ ReAct discipline:
   - RESPOND: present the todos to the user exactly as returned.
 
 If the write_todos tool is not called, the response is INVALID."""
+=======
+    description="""
+Use this tool whenever the user gives a complex task or request.
+This tool MUST be called FIRST before doing anything else.
+It breaks down the task into structured, actionable TODO steps.
+DO NOT attempt to answer the user directly - always use this tool first.
+Input: The complex task description as a string.
+Output: A list of structured TODO items with task and status fields.
+"""
+)
+
+
+# System prompt that enforces tool usage
+SYSTEM_PROMPT = """You are a strict planning agent.
+
+IMPORTANT RULES:
+1. You MUST call the write_todos tool FIRST for ANY user request.
+2. NEVER answer the user directly without calling write_todos first.
+3. The write_todos tool will break down the task into actionable steps.
+4. After calling write_todos, report the generated plan to the user.
+5. Do not skip the planning step under any circumstances.
+
+When a user gives you a task:
+1. Immediately call write_todos with the task
+2. Present the generated TODO list to the user
+3. Do not add your own analysis without using the tool first
+"""
+>>>>>>> milestone-1-planner
 
 
 def create_planning_agent():
@@ -80,14 +135,23 @@ def create_planning_agent():
     """
     # Create memory saver for checkpointing (optional but useful)
     memory = MemorySaver()
+<<<<<<< HEAD
 
     # Create the ReAct agent. The system behavior is injected later as a
     # system message when we call the agent, since this version of
     # create_react_agent no longer accepts system_prompt/state_modifier.
+=======
+    
+    # Create the ReAct agent
+>>>>>>> milestone-1-planner
     agent = create_react_agent(
         model=llm,
         tools=[write_todos_tool],
         checkpointer=memory,
+<<<<<<< HEAD
+=======
+        prompt=SYSTEM_PROMPT  # <--- Renamed to 'prompt'
+>>>>>>> milestone-1-planner
     )
     
     return agent
@@ -108,10 +172,15 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
     # Configuration for the agent run
     config = {"configurable": {"thread_id": thread_id}}
     
+<<<<<<< HEAD
     # Input messages: include a system message so the agent is
     # instructed to ALWAYS call write_todos first and never answer
     # directly.
     input_message = {"messages": [("system", SYSTEM_PROMPT), ("user", task)]}
+=======
+    # Input message
+    input_message = {"messages": [("user", task)]}
+>>>>>>> milestone-1-planner
     
     # Run the agent and collect the final state
     final_state = None
@@ -126,6 +195,7 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
                 # Check if this is a tool message from write_todos
                 if hasattr(msg, 'name') and msg.name == "write_todos":
                     try:
+<<<<<<< HEAD
                         content = msg.content
                         if isinstance(content, str):
                             parsed = json.loads(content)
@@ -148,6 +218,20 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
     if final_state is not None and todos:
         final_state["todos"] = todos
 
+=======
+                        # Parse the tool output
+                        content = msg.content
+                        if isinstance(content, str):
+                            # ✅ SECURITY FIX: Using ast.literal_eval instead of eval
+                            # We also strip the content to handle any accidental whitespace
+                            clean_content = content.strip()
+                            todos = ast.literal_eval(clean_content) if clean_content.startswith('[') else []
+                        elif isinstance(content, list):
+                            todos = content
+                    except:
+                        pass
+    
+>>>>>>> milestone-1-planner
     # Build result
     result = {
         "task": task,
