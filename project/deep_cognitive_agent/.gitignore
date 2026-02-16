@@ -58,3 +58,5 @@ htmlcov/
 # LangSmith traces (if local)
 # -----------------------------
 .langsmith/
+.env
+project/deep_cognitive_agent/.env
