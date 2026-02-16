@@ -9,6 +9,8 @@ from typing import List, Dict
 # from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 import os
+from dotenv import load_dotenv
+load_dotenv() # This sucks in the LangSmith keys from your .env file
 
 
 # Initialize LLM for planning

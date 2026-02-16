@@ -10,6 +10,8 @@ Test Inputs:
 3. Stock market research strategy
 4. Renewable energy research outline
 5. AI agents in healthcare report
+6. Develop a roadmap for DSA
+7. Breakdown the process of deploying the machine learning model 
 """
 
 import os
@@ -38,7 +40,9 @@ TEST_INPUTS = [
     "Build an AI chatbot architecture",
     "Stock market research strategy",
     "Renewable energy research outline",
-    "AI agents in healthcare report"
+    "AI agents in healthcare report",
+    "Develop a roadmap for DSA",
+    "Breakdown the process of deploying the machine learning model"
 ]
 
 
@@ -62,7 +66,7 @@ def run_all_tests():
     # Run each test
     for i, task in enumerate(TEST_INPUTS, 1):
         print("-" * 70)
-        print(f"TEST {i}/5: {task}")
+        print(f"TEST {i}/7: {task}")
         print("-" * 70)
         
         try:
