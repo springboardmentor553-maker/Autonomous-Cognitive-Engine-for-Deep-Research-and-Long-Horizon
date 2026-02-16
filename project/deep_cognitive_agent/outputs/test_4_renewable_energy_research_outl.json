@@ -2,50 +2,54 @@
   "task": "Renewable energy research outline",
   "todos": [
     {
-      "task": "Define the specific scope and focus of the renewable energy research (e.g., specific technologies, geographical region, economic impact, policy).",
+      "task": "Define the primary research objective and specific questions for the renewable energy research.",
       "status": "pending"
     },
     {
-      "task": "Identify the target audience and purpose of the research (e.g., academic paper, policy brief, general overview).",
+      "task": "Determine the scope of the research, including geographical focus, specific technologies, and timeframes.",
       "status": "pending"
     },
     {
-      "task": "Conduct preliminary background research to understand key concepts, current trends, and major debates in renewable energy.",
+      "task": "Identify major categories of renewable energy to be covered (e.g., solar, wind, hydro, geothermal, biomass, ocean).",
       "status": "pending"
     },
     {
-      "task": "Develop a working thesis statement or central research question that the outline will support.",
+      "task": "For each major category, outline key sub-topics such as technology overview, current status, recent advancements, efficiency, cost, and environmental impact.",
       "status": "pending"
     },
     {
-      "task": "Outline the introduction section, including background, definitions, and the thesis statement.",
+      "task": "Dedicate sections to cross-cutting themes relevant to all renewable energy sources, such as energy storage solutions, grid integration challenges, policy frameworks, economic viability, and social acceptance.",
       "status": "pending"
     },
     {
-      "task": "Identify the primary categories of renewable energy sources to be covered (e.g., solar, wind, hydro, geothermal, biomass, ocean).",
+      "task": "Outline a section for common challenges and barriers to renewable energy adoption (e.g., intermittency, infrastructure, financing).",
       "status": "pending"
     },
     {
-      "task": "For each primary category, list specific sub-topics to explore (e.g., technology overview, advantages, disadvantages, current deployment, future potential).",
+      "task": "Outline a section for potential solutions, future trends, and innovative approaches in the renewable energy sector.",
       "status": "pending"
     },
     {
-      "task": "Include cross-cutting themes relevant to all or multiple renewable sources (e.g., energy storage, grid integration, policy and regulation, economic viability, environmental impacts, social acceptance).",
+      "task": "Structure the outline with main headings: Introduction, Main Body, and Conclusion.",
       "status": "pending"
     },
     {
-      "task": "Outline the conclusion section, including a summary of key findings/points and future outlook or recommendations.",
+      "task": "Detail the Introduction section, including background, significance of renewable energy, and the research objectives.",
       "status": "pending"
     },
     {
-      "task": "Review the entire outline for logical flow, coherence, completeness, and non-repetition of topics.",
+      "task": "Organize the Main Body sections logically, integrating the major categories and cross-cutting themes identified in previous steps.",
       "status": "pending"
     },
     {
-      "task": "Add specific research questions or areas for deeper investigation under each major section to guide future research.",
+      "task": "Detail the Conclusion section, outlining key takeaways, implications, and potential areas for future research.",
+      "status": "pending"
+    },
+    {
+      "task": "Review the entire outline for logical flow, completeness, clarity, and non-repetition of topics.",
       "status": "pending"
     }
   ],
   "message_count": 4,
-  "final_response": "Here is a plan to create a renewable energy research outline:\n\n*   **Define the specific scope and focus of the renewable energy research** (e.g., specific technologies, geographical region, economic impact, policy).\n*   **Identify the target audience and purpose of the research** (e.g., academic paper, policy brief, general overview).\n*   **Conduct preliminary background research** to understand key concepts, current trends, and major debates in renewable energy.\n*   **Develop a working thesis statement or central research question** that the outline will support.\n*   **Outline the introduction section**, including background, definitions, and the thesis statement.\n*   **Identify the primary categories of renewable energy sources** to be covered (e.g., solar, wind, hydro, geothermal, biomass, ocean).\n*   **For each primary category, list specific sub-topics to explore** (e.g., technology overview, advantages, disadvantages, current deployment, future potential).\n*   **Include cross-cutting themes relevant to all or multiple renewable sources** (e.g., energy storage, grid integration, policy and regulation, economic viability, environmental impacts, social acceptance).\n*   **Outline the conclusion section**, including a summary of key findings/points and future outlook or recommendations.\n*   **Review the entire outline** for logical flow, coherence, completeness, and non-repetition of topics.\n*   **Add specific research questions or areas for deeper investigation** under each major section to guide future research."
+  "final_response": "Here is a detailed outline for your renewable energy research:\n\n*   **Define the primary research objective and specific questions for the renewable energy research.**\n*   **Determine the scope of the research, including geographical focus, specific technologies, and timeframes.**\n*   **Identify major categories of renewable energy to be covered (e.g., solar, wind, hydro, geothermal, biomass, ocean).**\n*   **For each major category, outline key sub-topics such as technology overview, current status, recent advancements, efficiency, cost, and environmental impact.**\n*   **Dedicate sections to cross-cutting themes relevant to all renewable energy sources, such as energy storage solutions, grid integration challenges, policy frameworks, economic viability, and social acceptance.**\n*   **Outline a section for common challenges and barriers to renewable energy adoption (e.g., intermittency, infrastructure, financing).**\n*   **Outline a section for potential solutions, future trends, and innovative approaches in the renewable energy sector.**\n*   **Structure the outline with main headings: Introduction, Main Body, and Conclusion.**\n*   **Detail the Introduction section, including background, significance of renewable energy, and the research objectives.**\n*   **Organize the Main Body sections logically, integrating the major categories and cross-cutting themes identified in previous steps.**\n*   **Detail the Conclusion section, outlining key takeaways, implications, and potential areas for future research.**\n*   **Review the entire outline for logical flow, completeness, clarity, and non-repetition of topics.**"
 }
