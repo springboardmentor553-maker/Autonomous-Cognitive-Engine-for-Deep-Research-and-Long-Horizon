@@ -1,0 +1,30 @@
+{
+  "task": "AI agents in healthcare report",
+  "todos": [
+    {
+      "task": "**Define Report Scope and Objectives:** Clearly identify the target audience (e.g., healthcare professionals, policymakers, investors), the primary purpose of the report (e.g., inform, analyze, recommend), and the specific areas of AI agents in healthcare to cover (e.g., diagnostics, drug discovery, patient management, administrative tasks, ethical implications, regulatory landscape).",
+      "status": "pending"
+    },
+    {
+      "task": "**Conduct Comprehensive Research and Data Collection:** Gather relevant information on current AI agent technologies, their applications, benefits, challenges, case studies, ethical considerations, regulatory frameworks, and future trends within the healthcare sector. Utilize academic journals, industry reports, government publications, expert interviews, and reputable news sources.",
+      "status": "pending"
+    },
+    {
+      "task": "**Develop a Detailed Report Outline and Structure:** Organize the collected information into a logical flow. Create a comprehensive outline including sections such as an Executive Summary, Introduction, Background on AI Agents, Specific Applications in Healthcare, Benefits, Challenges and Limitations, Ethical and Regulatory Considerations, Case Studies, Future Outlook, Conclusion, Recommendations, and References.",
+      "status": "pending"
+    },
+    {
+      "task": "**Draft the Report Content:** Write each section of the report, synthesizing the research and data according to the established outline. Ensure clarity, conciseness, and accuracy, using evidence-based arguments and supporting data. Maintain a consistent tone and style throughout the document.",
+      "status": "pending"
+    },
+    {
+      "task": "**Review, Edit, and Refine:** Critically evaluate the entire draft for accuracy, completeness, clarity, coherence, grammar, spelling, and punctuation. Verify that the report meets its defined objectives, addresses the target audience effectively, and presents a balanced perspective. Seek feedback from peers or subject matter experts if possible.",
+      "status": "pending"
+    },
+    {
+      "task": "**Format and Finalize the Report:** Add an executive summary, table of contents, list of figures/tables, proper citations and references, and ensure consistent formatting (e.g., fonts, headings, spacing). Prepare the report for its intended delivery format, ensuring it is professional and accessible.",
+      "status": "pending"
+    }
+  ],
+  "message_count": 4
+}

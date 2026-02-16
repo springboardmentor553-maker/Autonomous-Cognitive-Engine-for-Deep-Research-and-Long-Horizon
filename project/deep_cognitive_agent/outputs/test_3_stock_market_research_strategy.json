@@ -1,0 +1,26 @@
+{
+  "task": "Stock market research strategy",
+  "todos": [
+    {
+      "task": "**Define Investment Objectives and Criteria:** Clearly articulate your financial goals (e.g., growth, income, capital preservation), risk tolerance, investment horizon (short-term, long-term), and any specific sector preferences or ethical considerations. Establish quantitative and qualitative criteria (e.g., minimum market cap, P/E ratio range, dividend yield, debt-to-equity limits, competitive moat requirements) that potential investments must meet.",
+      "status": "pending"
+    },
+    {
+      "task": "**Idea Generation and Initial Screening:** Actively seek out potential investment opportunities through various sources such as financial news, industry reports, analyst recommendations, personal observations, and quantitative stock screeners. Apply your predefined criteria from Step 1 to filter a broad universe of stocks down to a manageable watchlist, performing a quick qualitative check on business models and competitive landscapes to eliminate obvious mismatches.",
+      "status": "pending"
+    },
+    {
+      "task": "**In-depth Fundamental Analysis:** For each stock on your watchlist, conduct a thorough examination of its business. This includes understanding the company's products/services, competitive advantages (moat), industry trends, and management quality. Analyze financial statements (Income Statement, Balance Sheet, Cash Flow Statement) to assess revenue growth, profitability, financial health, and cash generation capabilities over multiple periods. Evaluate corporate governance and shareholder alignment.",
+      "status": "pending"
+    },
+    {
+      "task": "**Valuation and Risk Assessment:** Determine the intrinsic value of the company using various valuation methodologies (e.g., Discounted Cash Flow (DCF), comparable company analysis, P/E ratios, EV/EBITDA multiples) to ascertain if the current market price offers a sufficient margin of safety. Simultaneously, identify and assess all relevant risks, including company-specific risks (e.g., product failure, management changes), industry risks (e.g., technological disruption, regulatory changes), and macroeconomic risks (e.g., interest rate fluctuations, recessions).",
+      "status": "pending"
+    },
+    {
+      "task": "**Synthesis, Decision, and Portfolio Integration:** Consolidate all research findings, weigh the potential rewards against the identified risks, and formulate a clear investment thesis. Make a definitive decision on whether the stock aligns with your investment objectives and criteria, offers an attractive risk-adjusted return, and provides a sufficient margin of safety. If proceeding, determine an appropriate position size for the investment within your overall portfolio, considering diversification, and plan your entry strategy.",
+      "status": "pending"
+    }
+  ],
+  "message_count": 4
+}

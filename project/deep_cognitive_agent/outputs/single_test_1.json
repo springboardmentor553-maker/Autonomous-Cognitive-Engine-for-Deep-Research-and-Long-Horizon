@@ -1,0 +1,30 @@
+{
+  "task": "Comparative study of EV vs Hydrogen vehicles",
+  "todos": [
+    {
+      "task": "Define the scope and key comparison categories for the study, including but not limited to: purchase cost, running costs (fuel/electricity, maintenance), range, refueling/charging time, infrastructure availability and development, environmental impact (well-to-wheel emissions, resource extraction), performance, safety, and lifecycle costs.",
+      "status": "pending"
+    },
+    {
+      "task": "Gather comprehensive data on Electric Vehicles (EVs), covering various models and technologies. This includes researching battery types, charging standards and speeds, typical ranges, electricity consumption, purchase prices, government incentives, manufacturing processes, and end-of-life battery management.",
+      "status": "pending"
+    },
+    {
+      "task": "Gather comprehensive data on Hydrogen Fuel Cell Vehicles (FCVs), covering available models and technologies. This includes researching fuel cell efficiency, hydrogen production methods (e.g., green, blue, grey hydrogen), refueling infrastructure and costs, typical ranges, hydrogen consumption, purchase prices, government incentives, and manufacturing processes.",
+      "status": "pending"
+    },
+    {
+      "task": "Conduct a detailed comparative analysis of EVs and FCVs across each defined category from Step 1. Quantify differences where possible (e.g., cost per mile, refueling time in minutes vs. charging time in hours) and qualitatively assess factors like infrastructure maturity, user experience, and technological readiness.",
+      "status": "pending"
+    },
+    {
+      "task": "Evaluate the full environmental and societal impacts of both vehicle types. This involves a \"well-to-wheel\" analysis for energy production (electricity generation mix vs. hydrogen production method), manufacturing emissions, operational emissions, and end-of-life disposal or recycling, as well as assessing resource dependency, grid strain, and potential for widespread adoption.",
+      "status": "pending"
+    },
+    {
+      "task": "Synthesize all findings to identify the strengths, weaknesses, opportunities, and threats for each technology. Formulate clear conclusions regarding their current viability, future potential, and suitability for different applications or regions, potentially including recommendations for policy, research, or consumer choice.",
+      "status": "pending"
+    }
+  ],
+  "message_count": 4
+}
