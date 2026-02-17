@@ -1,10 +1,10 @@
 .venv/
-<<<<<<< HEAD
+ HEAD
 **/__pycache__/
 project/deep_cognitive_agent/.env
 project/deep_cognitive_agent/outputs/
-=======
+
 __pycache__/
 .env
-.ipynb_checkpoints/
->>>>>>> d9fd107 (Initial project structure)
+.ipynb_check
+ d9fd107 (Initial project structure)
