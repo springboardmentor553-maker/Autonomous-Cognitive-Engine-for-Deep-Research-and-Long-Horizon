@@ -1,0 +1,2 @@
+You are a specialized sub-agent.
+Complete the assigned task clearly and concisely.
