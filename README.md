@@ -1,7 +1,10 @@
-
-
-# Autonomous Cognitive Engine for Deep Research and Long-Horizon Tasks
-initial ReadMe write by Rajat Roy, edit as needed
-
-## Project rules:
-Maintain your personal repo as a branch after forking [this](https://github.com/springboardmentor553-maker/Autonomous-Cognitive-Engine-for-Deep-Research-and-Long-Horizon/)
+# Autonomous Cognitive Engine
+This project implements a multi-agent, long-horizon autonomous system using:
+- Planning
+- Delegation
+- Memory
+- Reflection
+- Evaluation
+### Evaluation
+Run:
+```bash
