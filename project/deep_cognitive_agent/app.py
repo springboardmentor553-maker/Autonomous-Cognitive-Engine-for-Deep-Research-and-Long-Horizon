@@ -10,68 +10,113 @@ This implements a strict planning agent that:
 """
 
 import os
+import re
 import json
+import time
 from typing import List, Dict
 from dotenv import load_dotenv
 
 # Load environment variables from .env file BEFORE any LangChain imports
 load_dotenv()
 
-# Enable LangSmith Tracing
-os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
+# Enable LangSmith Tracing only when a key is available
+os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "false")
 os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
 
+# ── Early validation ──
+_groq_key = os.getenv("GROQ_API_KEY", "")
+if not _groq_key or _groq_key.startswith("your_"):
+    raise SystemExit(
+        "\n[ERROR] GROQ_API_KEY is missing or still set to the placeholder.\n"
+        "       1. Go to https://console.groq.com/keys and create an API key.\n"
+        "       2. Put it in project/deep_cognitive_agent/.env:\n"
+        "          GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx\n"
+        "       3. Or set it in PowerShell:  $env:GROQ_API_KEY = \"gsk_xxx\"\n"
+    )
+
 from langchain_groq import ChatGroq
-from langchain_core.tools import Tool
+from langchain_core.tools import StructuredTool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
+from pydantic import BaseModel, Field
 
 # Import the dynamic write_todos function
 from tools.planning.write_todos import write_todos, planning_prompt
 from graphs.state import AgentState
 
 
-# Initialize LLM (Groq free tier - Llama 3.3 70B)
+# Initialize LLM for the agent.
+# Model is configurable via GROQ_MODEL env var; defaults to 8b-instant
+# which has much higher free-tier daily token limits than the 70b model.
+_model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+print(f"[init] Using Groq model: {_model_name}")
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model=_model_name,
     temperature=0,
     groq_api_key=os.getenv("GROQ_API_KEY"),
 )
 
 
-# Create the write_todos tool with strong description
-write_todos_tool = Tool(
-    name="write_todos",
+def _parse_retry_after(err_str: str) -> int:
+    """Extract recommended wait seconds from a Groq rate-limit error message."""
+    match = re.search(r"try again in (?:(\d+)m)?(\d+(?:\.\d+)?)s", err_str)
+    if match:
+        minutes = int(match.group(1) or 0)
+        seconds = float(match.group(2))
+        return int(minutes * 60 + seconds) + 2  # small safety margin
+    return 30  # sensible default
+
+
+# Explicit input schema so the LLM knows to pass {"task": "..."} not __arg1
+class WriteTodosInput(BaseModel):
+    task: str = Field(description="The complex task description to break down into TODO steps")
+
+
+# Create the write_todos tool with explicit schema
+write_todos_tool = StructuredTool.from_function(
     func=write_todos,
+    name="write_todos",
     description=(
         "Use this tool to decompose complex tasks into structured to-do lists "
-        "before any execution. This tool MUST be called for complex tasks. "
-        "Input: The complex task description as a string. "
-        "Output: A dict with a 'todos' key containing a list of structured "
+        "before any execution. This tool MUST be called for every task. "
+        "Input: a single 'task' string with the task description. "
+        "Output: a dict with a 'todos' key containing a list of structured "
         "TODO items, each with 'task' and 'status' fields."
     ),
+    args_schema=WriteTodosInput,
 )
 
 
-# ── System prompt — enforces strict ReAct planning discipline ──
-SYSTEM_PROMPT = """You are a strict ReAct planning agent for Milestone 1.
+# ── System prompt — enforces strict planning-first discipline ──
+SYSTEM_PROMPT = """You are an autonomous Planning Agent. Your ONLY responsibility is to create a clear, structured plan before any task execution.
 
-ABSOLUTE RULES — you must follow every one of these without exception:
+CRITICAL RULES:
+1. Call write_todos EXACTLY ONCE with the ENTIRE user task as input.
+   - Do NOT call write_todos multiple times.
+   - Do NOT split the task into separate tool calls.
+   - Pass the full original task string to the tool.
 
-1. For ANY complex task the user gives you, you MUST call the write_todos tool FIRST.
-2. You MUST NOT answer the user directly or generate your own list of steps.
-3. You MUST NOT skip planning or attempt to execute any task.
-4. Milestone 1 only requires decomposition into structured todos — do NOT execute tasks.
-5. After calling write_todos, report the structured TODO list returned by the tool.
-   Do NOT add, remove, or reword the steps.
+2. Plan Before Acting (Mandatory)
+   - ALWAYS create a plan before answering any task.
+   - NEVER execute the task.
+   - NEVER give the final answer.
+   - Return ONLY the plan.
 
-ReAct discipline:
-  - THINK: reason briefly about what tool to call.
-  - ACT: call write_todos with the user's task.
-  - OBSERVE: read the structured todos returned.
-  - RESPOND: present the todos to the user exactly as returned.
+3. Stop After Planning
+   - After the tool returns the to-do list:
+     * DO NOT continue reasoning
+     * DO NOT provide explanations
+     * DO NOT answer the question
+     * DO NOT summarize
+   - Present the tool output and stop.
 
-If the write_todos tool is not called, the response is INVALID."""
+FORBIDDEN ACTIONS:
+- Calling write_todos more than once
+- Making multiple parallel tool calls
+- Answering the task or executing steps
+- Explaining reasoning or producing extra text
+
+SUCCESS: One write_todos call → present the result → stop."""
 
 
 def create_planning_agent():
@@ -113,11 +158,38 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
     # directly.
     input_message = {"messages": [("system", SYSTEM_PROMPT), ("user", task)]}
     
-    # Run the agent and collect the final state
+    # Run the agent with retry on rate-limit (429) errors
     final_state = None
     todos = []
-    
-    for event in agent.stream(input_message, config, stream_mode="values"):
+    max_retries = 5
+    event_stream = []
+
+    for attempt in range(max_retries):
+        try:
+            # Use a fresh thread_id for retries to avoid stale message history
+            retry_config = {"configurable": {"thread_id": f"{thread_id}-a{attempt}"}}
+            event_stream = list(agent.stream(input_message, retry_config, stream_mode="values"))
+            break
+        except Exception as e:
+            err_str = str(e)
+            is_rate_limit = "429" in err_str or "rate_limit" in err_str.lower()
+
+            if not is_rate_limit or attempt >= max_retries - 1:
+                raise
+
+            # Detect daily token limit (won't reset for hours)
+            if "tokens per day" in err_str.lower() or "(tpd)" in err_str.lower():
+                print(f"  ⚠ Daily token limit (TPD) reached for the current model.")
+                print(f"    Tip: change GROQ_MODEL in .env to a model with higher limits,")
+                print(f"         or wait until the daily quota resets (midnight UTC).")
+                raise
+
+            wait = _parse_retry_after(err_str)
+            print(f"  ⏳ Rate limited. Waiting {wait}s before retry {attempt + 2}/{max_retries}...")
+            time.sleep(wait)
+            continue
+
+    for event in event_stream:
         final_state = event
         
         # Check for tool messages that contain todos
