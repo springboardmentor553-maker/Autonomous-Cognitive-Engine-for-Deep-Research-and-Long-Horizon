@@ -2,43 +2,23 @@
   "task": "Build an AI chatbot architecture",
   "todos": [
     {
-      "task": "**Define Functional and Non-Functional Requirements:**",
+      "task": "**Define** Chatbot Scope, User Needs, and Core Functional Requirements.",
       "status": "pending"
     },
     {
-      "task": "Identify the core purpose and scope of the chatbot, including target users, specific use cases (e.g., Q&A, task automation, recommendations), supported interaction channels (web, mobile app, messaging platforms like Slack or WhatsApp), desired performance metrics (response time, concurrency), security protocols, and scalability needs for future growth.",
+      "task": "**Design** Core Architectural Components including NLU, Dialogue Management, and Knowledge Base.",
       "status": "pending"
     },
     {
-      "task": "**Design the Natural Language Understanding (NLU) Component:**",
+      "task": "**Select** Technology Stack, AI Models, and Development Frameworks.",
       "status": "pending"
     },
     {
-      "task": "Architect the system responsible for interpreting user input. This involves selecting or building an NLU engine to perform intent recognition (determining the user's goal), entity extraction (identifying key pieces of information), and potentially sentiment analysis or language detection. Define the data flow from raw text input to structured, machine-readable intent and entity outputs.",
+      "task": "**Map** Data Flow, System Integrations, and API Endpoints.",
       "status": "pending"
     },
     {
-      "task": "**Architect the Dialogue Management and State Tracking System:**",
-      "status": "pending"
-    },
-    {
-      "task": "Develop the core logic that manages the conversation flow, maintains context across turns, and determines the chatbot's next action or response. This includes designing mechanisms for state tracking (e.g., session variables, context windows), handling multi-turn conversations, disambiguation, error recovery, and generating appropriate responses (either through template-based methods or Natural Language Generation).",
-      "status": "pending"
-    },
-    {
-      "task": "**Plan Backend Integrations and Knowledge Base Management:**",
-      "status": "pending"
-    },
-    {
-      "task": "Outline how the chatbot will interact with external systems and access necessary information. Identify and design APIs for integration with backend services (e.g., CRM, ERP, payment gateways, internal databases) to fulfill user requests. Define the structure, storage, and retrieval mechanisms for the chatbot's knowledge base (e.g., FAQ documents, product catalogs, user profiles) and ensure secure data access.",
-      "status": "pending"
-    },
-    {
-      "task": "**Define the User Interface (UI) and Channel Integration Layer:**",
-      "status": "pending"
-    },
-    {
-      "task": "Specify how users will interact with the chatbot across various platforms. Design the interface for each chosen channel (e.g., a web widget, mobile SDK, or platform-specific integrations for Slack, Facebook Messenger, etc.), ensuring a consistent and intuitive user experience. Detail the API or SDK requirements for connecting the chatbot's core logic to these front-end channels, including handling rich media, quick replies, and other channel-specific features.",
+      "task": "**Outline** Deployment Strategy, Scalability Requirements, and Monitoring Protocols.",
       "status": "pending"
     }
   ],

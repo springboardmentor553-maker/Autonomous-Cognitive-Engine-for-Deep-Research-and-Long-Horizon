@@ -69,6 +69,16 @@ def run_all_tests():
             # Run agent with unique thread ID
             thread_id = f"test-{i}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             result = run_agent(agent, task, thread_id=thread_id)
+            # --- Validation logic for accuracy ---
+            is_valid = (
+                isinstance(result["todos"], list) and
+                len(result["todos"]) == 5 and
+                all(
+                    isinstance(todo.get("task"), str) and todo["task"].strip() != ""
+                    for todo in result["todos"]
+                )
+            )
+            
             
             # Display generated todos
             print(f"\nGenerated {len(result['todos'])} TODOs:")
@@ -86,7 +96,7 @@ def run_all_tests():
                 "task": task,
                 "todo_count": len(result["todos"]),
                 "output_file": filepath,
-                "success": True
+                "success": is_valid
             })
             
             print(f"\n✅ Test {i} completed successfully!")
@@ -110,9 +120,11 @@ def run_all_tests():
     print("=" * 70)
     
     successful = sum(1 for r in all_results if r["success"])
+    accuracy = (successful / len(TEST_INPUTS)) * 100
     print(f"\nTotal Tests: {len(TEST_INPUTS)}")
     print(f"Successful: {successful}")
     print(f"Failed: {len(TEST_INPUTS) - successful}")
+    print(f"\nDecomposition Accuracy: {accuracy:.2f}%")
     
     print("\nDetailed Results:")
     for r in all_results:

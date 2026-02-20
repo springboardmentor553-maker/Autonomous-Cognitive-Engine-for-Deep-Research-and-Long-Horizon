@@ -60,3 +60,4 @@ htmlcov/
 .langsmith/
 .env
 project/deep_cognitive_agent/.env
+cognitive-engine-for-deep-research/deep_cognitive_agent/.env

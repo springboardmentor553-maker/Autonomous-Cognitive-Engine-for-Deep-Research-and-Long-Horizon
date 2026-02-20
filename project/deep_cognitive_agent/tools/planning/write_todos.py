@@ -17,10 +17,18 @@ def write_todos(task: str) -> List[Dict]:
     """
 
     prompt = f"""
-Break the following complex task into at least 5 detailed,
-clear, logically ordered steps.
+You are a professional planning assistant.
 
-Return ONLY numbered steps.
+Break the following complex task into EXACTLY FIVE
+clear, logically ordered, non-redundant steps.
+
+STRICT RULES:
+- Exactly 5 steps (no more, no less)
+- Each step must begin with a strong action verb
+- Steps must be specific and actionable
+- Do not repeat the task sentence
+- Do not include introduction or conclusion text
+- Return ONLY a numbered list
 
 Task:
 {task}
@@ -41,4 +49,10 @@ Task:
                 "status": "pending"
             })
 
+    # Force exactly 5
+    if len(todos) > 5:
+        todos = todos[:5]
+    elif len(todos) < 5:
+        return []
+        
     return todos

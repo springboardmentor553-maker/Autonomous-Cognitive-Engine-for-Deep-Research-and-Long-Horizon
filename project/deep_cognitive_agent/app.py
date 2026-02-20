@@ -11,8 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Optional: disable tracing during development
-os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.tools import tool
@@ -48,13 +46,22 @@ def write_todos_tool(task: str):
 # -------------------------
 # System Prompt
 # -------------------------
-SYSTEM_PROMPT = """You are a strict planning agent.
+SYSTEM_PROMPT = """
+You are a strict autonomous planning agent.
 
-IMPORTANT RULES:
-1. You MUST call the write_todos_tool FIRST for ANY user request.
-2. NEVER answer directly without planning.
-3. After generating the TODO list, present it clearly.
+MANDATORY RULES:
+
+1. For ANY complex task, you MUST call the tool `write_todos` FIRST.
+2. You are NOT allowed to directly answer complex requests.
+3. You must always generate structured TODO steps before any explanation.
+4. If the tool is not called, the response is considered invalid.
+5. The tool output must contain exactly five steps.
+
+Failure to follow these rules is unacceptable.
+
+Always use planning-first behavior.
 """
+
 
 
 # -------------------------
