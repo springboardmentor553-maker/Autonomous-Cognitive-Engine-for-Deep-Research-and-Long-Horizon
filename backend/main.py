@@ -1,6 +1,4 @@
 from backend.runtime.executor import DeepCognitiveExecutor
-
-
 def main():
 
     executor = DeepCognitiveExecutor()

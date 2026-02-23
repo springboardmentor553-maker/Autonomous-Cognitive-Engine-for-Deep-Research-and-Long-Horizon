@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\dell\OneDrive\Desktop\autonomous cogntive engine\.venv
+set VIRTUAL_ENV=C:\Users\Hp\Downloads\autonomous cogntive engine\.venv
 
 if not defined PROMPT set PROMPT=$P$G
 

@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\dell\OneDrive\Desktop\autonomous cogntive engine\.venv"
+VIRTUAL_ENV="C:\Users\Hp\Downloads\autonomous cogntive engine\.venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
