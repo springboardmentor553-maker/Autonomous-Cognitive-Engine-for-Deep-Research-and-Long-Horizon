@@ -19,25 +19,26 @@ load_dotenv()
 
 # Initialize LLM for planning (Groq free tier - Llama 3.3 70B)
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="llama-3.1-8b-versatile",
     temperature=0,
-    groq_api_key=os.getenv("GROQ_API_KEY"),
+    groq_api_key="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",
 )
 
 # Planning prompt template — enforces strict JSON output
+# Updated planning prompt template — forces EXACTLY 5 steps
 planning_prompt = PromptTemplate(
     input_variables=["task"],
     template="""You are a planning agent.
 
-Break the following complex task into 4 to 6 logically ordered, clear, non-repeating, actionable steps.
+Break the following complex task into EXACTLY 5 logically ordered, clear, non-repeating, actionable steps.
 
 STRICT OUTPUT RULES:
 - Return ONLY valid JSON.
+- The output MUST be a JSON array of EXACTLY 5 strings.
 - Do NOT include markdown, code fences, or explanations.
-- The output MUST be a JSON array of strings.
 
 Example output:
-["Research the topic", "Identify key components", "Draft an outline", "Review and refine"]
+["Step one", "Step two", "Step three", "Step four", "Step five"]
 
 Task: {task}"""
 )

@@ -1,0 +1,8 @@
+{
+    "test_number": 1,
+    "input": "Create a research outline for renewable energy trends",
+    "timestamp": "2026-02-17T11:12:18.279267",
+    "result": {
+        "task": "Create a research outline for renewable energy trends",
+        "messages": [
+            

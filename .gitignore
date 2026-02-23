@@ -1,10 +1,23 @@
+# Virtual environments
 .venv/
- HEAD
+venv/
+
+# Python cache
+__pycache__/
 **/__pycache__/
+
+# Environment variables
+.env
 project/deep_cognitive_agent/.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Outputs
+outputs/
 project/deep_cognitive_agent/outputs/
 
-__pycache__/
-.env
-.ipynb_check
- d9fd107 (Initial project structure)
+# OS files
+.DS_Store
+Thumbs.db
+
