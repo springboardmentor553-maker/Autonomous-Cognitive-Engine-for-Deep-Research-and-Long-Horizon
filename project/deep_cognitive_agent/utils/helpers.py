@@ -1,0 +1,63 @@
+"""
+Utility helper functions for the Deep Cognitive Agent.
+"""
+
+import re
+import time
+from typing import Optional
+
+
+def parse_retry_after(err_str: str, default: int = 30) -> int:
+    """Extract recommended wait seconds from a Groq rate-limit error message.
+
+    Args:
+        err_str: The error message string from the API.
+        default: Default wait time (seconds) if parsing fails.
+
+    Returns:
+        Number of seconds to wait before retrying.
+    """
+    match = re.search(r"try again in (?:(\d+)m)?(\d+(?:\.\d+)?)s", err_str)
+    if match:
+        minutes = int(match.group(1) or 0)
+        seconds = float(match.group(2))
+        return int(minutes * 60 + seconds) + 2  # small safety margin
+    return default
+
+
+def is_rate_limit_error(err_str: str) -> bool:
+    """Check if an error string indicates a rate limit."""
+    return "429" in err_str or "rate_limit" in err_str.lower()
+
+
+def invoke_with_retry(llm, prompt: str, max_retries: int = 3) -> str:
+    """Invoke an LLM with automatic rate-limit retry.
+
+    Args:
+        llm: The LLM instance to invoke.
+        prompt: The prompt string to send.
+        max_retries: Maximum number of retry attempts.
+
+    Returns:
+        The text content of the LLM response.
+    """
+    for attempt in range(max_retries):
+        try:
+            response = llm.invoke(prompt)
+            return response.content
+        except Exception as e:
+            err_str = str(e)
+            if is_rate_limit_error(err_str) and attempt < max_retries - 1:
+                wait = parse_retry_after(err_str)
+                print(f"  ⏳ Rate limited. Waiting {wait}s before retry "
+                      f"{attempt + 2}/{max_retries}...")
+                time.sleep(wait)
+                continue
+            raise
+
+
+def truncate(text: str, max_length: int = 200, suffix: str = "...") -> str:
+    """Truncate a string to max_length, adding suffix if truncated."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length - len(suffix)] + suffix

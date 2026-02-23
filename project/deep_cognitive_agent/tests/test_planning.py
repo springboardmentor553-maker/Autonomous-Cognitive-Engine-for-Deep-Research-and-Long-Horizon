@@ -56,7 +56,7 @@ TEST_INPUTS = [
     "Create a technical writing outline for AI ethics",
     "Develop a marketing strategy for a new SaaS product",
     "Design a disaster recovery plan for a cloud-based system",
-    "Create a deployment checklist for Kubernetes microservices"
+    "Create a deployment checklist for Kubernetes microservices" 
     
 ]
 
