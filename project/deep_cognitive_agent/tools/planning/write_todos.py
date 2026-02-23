@@ -19,7 +19,7 @@ load_dotenv()
 
 # Initialize LLM for planning (Groq free tier - Llama 3.3 70B)
 llm = ChatGroq(
-    model="llama-3.1-8b-versatile",
+    model="llama-3.1-8b-instant",
     temperature=0,
     groq_api_key="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",
 )

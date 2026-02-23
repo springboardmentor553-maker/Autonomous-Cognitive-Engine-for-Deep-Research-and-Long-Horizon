@@ -55,11 +55,12 @@ def save_test_output(test_number, input_text, result):
         "test_number": test_number,
         "input": input_text,
         "timestamp": datetime.now().isoformat(),
-        "result": result,   # ✅ keep structured JSON
+        "result": result, 
     }
 
     with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(output_data, f, indent=4, ensure_ascii=False)
+        # ✅ Added default=str to prevent 'HumanMessage is not JSON serializable'
+        json.dump(output_data, f, indent=4, ensure_ascii=False, default=str)
 
     return filepath
 
@@ -125,7 +126,7 @@ def run_single_test(test_number, input_text, agent):
 
     for run in range(3):  # ✅ mentor requirement
         print(f"Run {run+1}")
-        time.sleep(2)
+        time.sleep(5)
         result = run_agent(agent, input_text)
 
         valid, message = validate_todos(result)
