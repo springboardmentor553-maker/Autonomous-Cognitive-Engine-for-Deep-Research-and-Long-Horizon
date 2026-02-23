@@ -1,4 +1,8 @@
 .venv/
+venv/
 **/__pycache__/
 project/deep_cognitive_agent/.env
 project/deep_cognitive_agent/outputs/
+.env
+*.pyc
+.vscode/
