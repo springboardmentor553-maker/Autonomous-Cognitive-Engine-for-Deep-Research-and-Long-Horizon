@@ -17,8 +17,8 @@ from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from tools.planning.write_todos import write_todos
-from graphs.execution_graph import build_execution_graph
+from project.deep_cognitive_agent.tools.planning.write_todos import write_todos
+from project.deep_cognitive_agent.graphs.execution_graph import build_execution_graph
 
 # -------------------------
 # LLM (Gemini)
