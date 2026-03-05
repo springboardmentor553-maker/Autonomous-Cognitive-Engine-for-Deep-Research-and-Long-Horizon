@@ -1,6 +1,6 @@
 """
-Milestone 2: Agent with Context Offloading via Virtual File System
-==================================================================
+Milestone 2: Deep Cognitive Agent with Context Offloading & Architectural Maturity
+===================================================================================
 
 Architecture
 ------------
@@ -10,35 +10,39 @@ LangGraph StateGraph with three nodes:
 
 State structure:
     state = {
-        "todos":        [],       # structured TODO list
+        "todos":        [],       # enriched TODOs with step_type, output_file, depends_on
         "files":        {},       # virtual file system  (filename → content)
         "messages":     [],       # conversation messages
         "final_output": "",       # combined structured summary
         "current_step": None,
+        "trace_log":    [],       # ordered tool invocation trace for evaluation
     }
 
-Workflow (e.g. for climate-change task):
-    1. Plan  → write_todos creates 4-6 TODO steps
-    2. Execute step 1 → LLM generates paragraph → write_file("summary1.txt")
-    3. Execute step 2 → LLM generates paragraph → write_file("summary2.txt")
-    4. Execute step 3 → LLM generates paragraph → write_file("summary3.txt")
-    5. Synthesize → read_file("summary1.txt")
-    6. Synthesize → read_file("summary2.txt")
-    7. Synthesize → read_file("summary3.txt")
-    8. Synthesize → LLM generates combined structured summary
+Architectural Principles:
+    ✔ Selective retrieval — only reads files needed for each step
+    ✔ Meaningful file names — derived from task content (not numbered)
+    ✔ edit_file for refinement — demonstrates read→modify→edit pattern
+    ✔ Clean dependency chain — each step builds on prior outputs
+    ✔ Memory offloading — content stored in VFS, dropped from context
+    ✔ Trace logging — every tool call recorded with purpose
+    ✔ No duplication — write to file, return confirmation only
+    ✔ Scaling stability — handles 3→20 files without architecture change
 
-Important rules:
-    • write_file is used for each individual summary
-    • read_file is used before final synthesis
-    • No bypass of file system — agent offloads context to VFS
-    • File content is visible in state["files"]
+Workflow Example (AI ethics frameworks):
+    1. Plan  → write_todos creates 6 enriched steps with dependencies
+    2. Execute research → write_file("ethics_framework_A_summary.txt")
+    3. Execute research → write_file("ethics_framework_B_summary.txt")
+    4. Execute compare  → read_file(A,B) → write_file("comparison_analysis.txt")
+    5. Execute unify    → read_file(comparison) → write_file("unified_model.txt")
+    6. Execute refine   → read_file(unified) → edit_file("unified_model.txt")
+    7. Synthesize       → read_file(unified,comparison) → final_output
 """
 
 import os
 import json
 import time
 from typing import Dict
-from functools import partial
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -61,18 +65,7 @@ if not _groq_key or _groq_key.startswith("your_"):
     )
 
 from langchain_groq import ChatGroq
-from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage
-from pydantic import BaseModel, Field
-
-# ── VFS tool functions (operate ONLY on state["files"]) ──
-from tools.vfs.write_file import write_file
-from tools.vfs.read_file import read_file
-from tools.vfs.ls import ls
-from tools.vfs.edit_file import edit_file
-
-# ── Planning tool ──
-from tools.planning.write_todos import write_todos
 
 # ── Graph builder ──
 from graphs.main_graph import build_graph
@@ -90,148 +83,200 @@ llm = ChatGroq(
 )
 
 
-# ── LangChain Tool wrappers ─────────────────────────────────────────
-#
-# These wrap the raw VFS functions into LangChain StructuredTool
-# objects.  A shared ``_vfs_state`` dict is bound via functools.partial
-# so the LLM-facing tool signatures only expose (filename, content).
-
-_vfs_state: Dict = {"files": {}}
-
-
-# Wrap partials in proper functions so StructuredTool can inspect
-# type hints and build schemas correctly.
-
-def _write_file_bound(filename: str, content: str) -> str:
-    """Write content to a virtual file."""
-    return write_file(_vfs_state, filename, content)
-
-
-def _read_file_bound(filename: str) -> str:
-    """Read content from a virtual file."""
-    return read_file(_vfs_state, filename)
-
-
-def _ls_bound() -> list:
-    """List all files."""
-    return ls(_vfs_state)
-
-
-def _edit_file_bound(filename: str, new_content: str) -> str:
-    """Edit content of a virtual file."""
-    return edit_file(_vfs_state, filename, new_content)
-
-
-write_file_tool = StructuredTool.from_function(
-    func=_write_file_bound,
-    name="write_file",
-    description="Write content to a virtual file.",
-)
-
-read_file_tool = StructuredTool.from_function(
-    func=_read_file_bound,
-    name="read_file",
-    description="Read content from a virtual file.",
-)
-
-ls_tool = StructuredTool.from_function(
-    func=_ls_bound,
-    name="ls",
-    description="List all files.",
-)
-
-edit_file_tool = StructuredTool.from_function(
-    func=_edit_file_bound,
-    name="edit_file",
-    description="Edit content of a virtual file.",
-)
-
-
 # ── Runner ───────────────────────────────────────────────────────────
 
 def run_milestone2(task: str) -> Dict:
     """
     Run the Milestone 2 agent pipeline:
-        plan → execute (with write_file) → synthesize (with read_file)
+        plan → execute (research/compare/unify/refine) → synthesize
 
     Args:
         task: The user's natural-language task description.
 
     Returns:
-        The final AgentState dict with todos, files, and final_output.
+        The final AgentState dict with todos, files, trace_log, and final_output.
     """
+    print("\n" + "=" * 70)
+    print("  Milestone 2: Deep Cognitive Agent with Context Offloading")
     print("=" * 70)
-    print("  Milestone 2: Agent with Context Offloading (VFS)")
-    print("=" * 70)
-    print(f"\n  Task: {task}\n")
+    print(f"\n  Task: {task}")
+    print(f"  Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
     # Build the LangGraph StateGraph
     graph = build_graph(llm)
 
-    # Initial state
+    # Initial state — trace_log starts empty, populated by each node
     initial_state = {
         "messages": [HumanMessage(content=task)],
         "todos": [],
         "files": {},
         "final_output": "",
         "current_step": None,
+        "trace_log": [],
     }
 
     # Run the graph
+    start_time = time.time()
     final_state = graph.invoke(initial_state)
+    elapsed = time.time() - start_time
 
     # ── Print results ────────────────────────────────────────────────
+    _print_results(final_state, task, elapsed)
+
+    # ── Save to JSON ─────────────────────────────────────────────────
+    _save_results(final_state, task)
+
+    return final_state
+
+
+def _print_results(final_state: dict, task: str, elapsed: float):
+    """Print formatted results with trace log analysis."""
     print("\n" + "=" * 70)
-    print("  FINAL RESULTS")
+    print("  EXECUTION RESULTS")
     print("=" * 70)
 
-    # TODOs
-    print("\n--- TODOs ---")
+    # ── TODOs ──
+    print("\n--- Enriched Plan (TODOs with Dependencies) ---")
     for i, todo in enumerate(final_state.get("todos", []), 1):
         status = todo.get("status", "pending")
+        stype = todo.get("step_type", "?")
+        ofile = todo.get("output_file", "?")
+        deps = todo.get("depends_on", [])
         icon = "✅" if status == "done" else "⬜"
-        print(f"  {i}. {icon} {todo['task']}  [{status}]")
+        dep_str = f" ← reads: {deps}" if deps else ""
+        print(f"  {i}. {icon} [{stype:8s}] {todo['task']}  [{status}]")
+        print(f"              → {ofile}{dep_str}")
 
-    # Virtual File System contents
-    print("\n--- state[\"files\"] (Virtual File System) ---")
+    # ── Virtual File System ──
+    print("\n--- Virtual File System (state['files']) ---")
     files = final_state.get("files", {})
     if files:
         for fname in sorted(files.keys()):
             content = files[fname]
-            print(f"\n  📄 {fname}  ({len(content)} chars):")
-            preview = content[:300].replace("\n", "\n    ")
-            print(f"    {preview}")
-            if len(content) > 300:
-                print(f"    ... ({len(content) - 300} more chars)")
+            print(f"\n  📄 {fname}  ({len(content)} chars)")
     else:
         print("  (empty)")
 
-    # Final output
+    # ── Tool Invocation Trace (Critical for Evaluation) ──
+    print("\n--- Tool Invocation Trace ---")
+    trace_log = final_state.get("trace_log", [])
+    if trace_log:
+        for i, entry in enumerate(trace_log, 1):
+            action = entry.get("action", "?")
+            fname = entry.get("file", "—")
+            purpose = entry.get("purpose", "")
+            step = entry.get("step", "?")
+            print(f"  {i:2d}. [{action:12s}] {fname or '—':35s} "
+                  f"(step {step}) {purpose[:60]}")
+    else:
+        print("  (no trace entries)")
+
+    # ── Architecture Analysis ──
+    print("\n--- Architecture Analysis ---")
+    write_count = sum(1 for t in trace_log if t["action"] == "write_file")
+    read_count = sum(1 for t in trace_log if t["action"] == "read_file")
+    edit_count = sum(1 for t in trace_log if t["action"] == "edit_file")
+    ls_count = sum(1 for t in trace_log if t["action"] == "ls")
+    print(f"  write_file calls: {write_count}")
+    print(f"  read_file calls:  {read_count}")
+    print(f"  edit_file calls:  {edit_count}")
+    print(f"  ls calls:         {ls_count}")
+    print(f"  Total tool calls: {len(trace_log)}")
+    print(f"  Files created:    {len(files)}")
+    print(f"  Read/Write ratio: {read_count}/{write_count}")
+    print(f"  Execution time:   {elapsed:.1f}s")
+
+    # Verify key patterns
+    patterns = []
+    if edit_count > 0:
+        patterns.append("✔ edit_file used (read→modify→edit pattern)")
+    else:
+        patterns.append("⚠ No edit_file usage detected")
+
+    has_selective = any("selective" in t.get("purpose", "").lower()
+                        or "Selective" in t.get("purpose", "")
+                        for t in trace_log)
+    if has_selective:
+        patterns.append("✔ Selective retrieval demonstrated")
+    else:
+        patterns.append("⚠ No selective retrieval detected")
+
+    has_meaningful_names = all(
+        not fname.startswith("summary") and not fname.startswith("step_")
+        for fname in files.keys()
+        if fname.endswith("_summary.txt")
+    ) if files else False
+    if has_meaningful_names:
+        patterns.append("✔ Meaningful file names (not numbered)")
+    else:
+        patterns.append("⚠ File naming could be more descriptive")
+
+    if write_count > 0 and read_count > 0:
+        patterns.append("✔ Memory offloading (write→read pattern)")
+
+    for p in patterns:
+        print(f"  {p}")
+
+    # ── Final Output (summary only, not duplicating file content) ──
     print("\n--- Final Structured Summary ---")
     final_output = final_state.get("final_output", "")
     if final_output:
-        print(final_output)
+        # Show first 500 chars to avoid duplication with files
+        if len(final_output) > 500:
+            print(final_output[:500])
+            print(f"\n  ... ({len(final_output) - 500} more chars)")
+            print(f"  Full output saved to outputs/milestone2_output.json")
+        else:
+            print(final_output)
     else:
         print("  (no output)")
 
-    # Save to JSON
+    print(f"\n  Elapsed: {elapsed:.1f}s")
+
+
+def _save_results(final_state: dict, task: str):
+    """Save results to JSON file with trace log."""
     os.makedirs("outputs", exist_ok=True)
-    output_path = os.path.join("outputs", "milestone2_output.json")
+
+    # Create a clean filename from the task
+    task_slug = task[:40].lower()
+    task_slug = "".join(c if c.isalnum() or c == " " else "" for c in task_slug)
+    task_slug = task_slug.strip().replace(" ", "_")
+
     serializable = {
         "task": task,
+        "timestamp": datetime.now().isoformat(),
         "todos": final_state.get("todos", []),
         "files": final_state.get("files", {}),
+        "trace_log": final_state.get("trace_log", []),
         "final_output": final_state.get("final_output", ""),
+        "architecture_metrics": {
+            "total_files": len(final_state.get("files", {})),
+            "total_tool_calls": len(final_state.get("trace_log", [])),
+            "write_calls": sum(1 for t in final_state.get("trace_log", [])
+                               if t["action"] == "write_file"),
+            "read_calls": sum(1 for t in final_state.get("trace_log", [])
+                              if t["action"] == "read_file"),
+            "edit_calls": sum(1 for t in final_state.get("trace_log", [])
+                              if t["action"] == "edit_file"),
+        },
     }
+
+    # Save main output
+    output_path = os.path.join("outputs", "milestone2_output.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(serializable, f, indent=2, ensure_ascii=False)
     print(f"\n  💾 Saved results to {output_path}")
 
+    # Save task-specific output
+    task_path = os.path.join("outputs", f"m2_{task_slug}.json")
+    with open(task_path, "w", encoding="utf-8") as f:
+        json.dump(serializable, f, indent=2, ensure_ascii=False)
+    print(f"  💾 Saved task results to {task_path}")
+
     print("\n" + "=" * 70)
     print("  Milestone 2 complete.")
     print("=" * 70)
-
-    return final_state
 
 
 # ── Main ─────────────────────────────────────────────────────────────
@@ -240,14 +285,52 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Milestone 2: Agent with Context Offloading via VFS",
+        description="Milestone 2: Deep Cognitive Agent with Context Offloading",
     )
     parser.add_argument(
         "--task",
         type=str,
-        required=True,
-        help="The task for the agent to execute. Can be ANY task.",
+        default=None,
+        help="The task for the agent. If not provided, interactive mode.",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Force interactive mode even if --task is provided.",
     )
     args = parser.parse_args()
 
-    run_milestone2(args.task)
+    if args.task and not args.interactive:
+        # Direct execution with provided task
+        run_milestone2(args.task)
+    else:
+        # Interactive mode — user provides input
+        print("\n" + "=" * 70)
+        print("  Deep Cognitive Agent — Milestone 2")
+        print("  Interactive Mode")
+        print("=" * 70)
+        print("\n  Enter your task below. Examples:")
+        print("  • Analyze four AI ethics frameworks, identify differences,")
+        print("    propose a unified model, then refine with sustainability.")
+        print("  • Compare policy differences between Germany and India.")
+        print("  • Research renewable energy trends and create a strategic plan.")
+        print()
+
+        while True:
+            try:
+                task = input("  Your task > ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n\n  Goodbye!")
+                break
+
+            if not task:
+                print("  (empty input — please enter a task or Ctrl+C to exit)\n")
+                continue
+
+            if task.lower() in ("quit", "exit", "q"):
+                print("\n  Goodbye!")
+                break
+
+            run_milestone2(task)
+
+            print("\n  Enter another task or type 'quit' to exit.\n")

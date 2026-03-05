@@ -34,15 +34,21 @@ def _get_llm():
         )
     return _llm
 
-# Planning prompt template — enforces strict JSON output
+# Planning prompt template — enforces structured dependency chain
 planning_prompt = PromptTemplate(
     input_variables=["task"],
-    template="""Break the following task into 4-6 clear, specific, actionable TODO steps.
+    template="""Break the following task into 5-8 clear, specific, actionable steps.
 
-Each step must start with a strong action verb such as:
-Analyze, Collect, Break down, Design, Compare, Draft, Evaluate, Implement, Validate, Test, Review.
+Structure the steps in this logical dependency order:
+1. RESEARCH steps (2-4 steps): Individual research, analysis, or summary tasks
+2. COMPARISON step (1 step): Compare, contrast, or analyze across the research findings
+3. SYNTHESIS step (1 step): Propose, create, unify, or develop a combined output
+4. REFINEMENT step (1 step): Refine, improve, or enhance the combined output
 
-Avoid repetition. Steps must be non-overlapping, meaningful, and in logical order.
+Each step must:
+- Start with a strong action verb (Research, Analyze, Summarize, Compare, Propose, Refine, etc.)
+- Be specific, non-overlapping, and meaningful
+- Follow a clear dependency chain (later steps build on earlier ones)
 
 STRICT OUTPUT RULES:
 - Return ONLY valid JSON.
@@ -50,8 +56,8 @@ STRICT OUTPUT RULES:
 - The output MUST be a JSON array of strings.
 - NOT a dictionary. NOT nested. NOT numbered.
 
-Correct example:
-["Analyze the task requirements and constraints", "Break the task into logical sub-tasks", "Determine the tools, data, or resources needed", "Sequence the sub-tasks into an executable order", "Review the plan for completeness and clarity"]
+Correct example for "Analyze different AI approaches and propose a unified framework":
+["Research the key principles and applications of supervised learning", "Research the key principles and applications of unsupervised learning", "Research the key principles and applications of reinforcement learning", "Compare the strengths, weaknesses, and use cases across all three approaches", "Propose a unified AI framework that integrates the best elements of each approach", "Refine the unified framework with practical implementation guidelines and scalability considerations"]
 
 Task: {task}"""
 )
@@ -131,9 +137,9 @@ def write_todos(task: str) -> Dict:
             f"All steps must be strings. Got types: {[type(s).__name__ for s in steps]}"
         )
 
-    if len(steps) < 4 or len(steps) > 6:
+    if len(steps) < 4 or len(steps) > 8:
         raise ValueError(
-            f"Plan must contain 4-6 steps. Got {len(steps)} steps."
+            f"Plan must contain 4-8 steps. Got {len(steps)} steps."
         )
 
     # Convert JSON list into structured dictionaries

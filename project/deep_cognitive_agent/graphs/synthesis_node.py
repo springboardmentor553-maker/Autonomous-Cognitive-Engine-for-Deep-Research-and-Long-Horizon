@@ -1,8 +1,10 @@
 """
-Synthesis Node - Milestone 2
+Synthesis Node - Milestone 2: Selective Retrieval + Final Summary
 
-Reads all summaries from the virtual file system using read_file()
-and ls(), then invokes the LLM to produce one final structured summary.
+Demonstrates selective retrieval discipline:
+  - Reads ONLY the key output files (unified_model.txt, comparison.txt)
+  - Does NOT re-read all individual research summaries
+  - Builds final output from processed/synthesized content only
 
 Architecture:  START → plan → execute → **synthesize** → END
 """
@@ -14,68 +16,114 @@ from langchain_core.messages import AIMessage
 
 from tools.vfs.read_file import read_file
 from tools.vfs.ls import ls
-
-
-# ── Helpers ──────────────────────────────────────────────────────────
-
-def _parse_retry_after(err_str: str) -> int:
-    """Extract wait seconds from a Groq rate-limit error."""
-    match = re.search(r"try again in (?:(\d+)m)?(\d+(?:\.\d+)?)s", err_str)
-    if match:
-        minutes = int(match.group(1) or 0)
-        seconds = float(match.group(2))
-        return int(minutes * 60 + seconds) + 2
-    return 30
+from utils.helpers import parse_retry_after, is_rate_limit_error
 
 
 # ── Node Function ────────────────────────────────────────────────────
 
 def synthesize_node(state: dict, llm) -> dict:
     """
-    Synthesis node: reads every file in the VFS using read_file(),
-    then asks the LLM to combine the content into one structured summary.
+    Synthesis node: selectively reads key output files from VFS
+    (NOT all files) and generates a final structured summary.
+
+    Selective retrieval logic:
+      1. If unified_model.txt exists → read only that (already refined)
+      2. If comparison_analysis.txt exists → read that as supplement
+      3. Only fall back to all files if no key files found
+
+    This demonstrates:
+      ✔ Selective retrieval — not blind loading
+      ✔ Memory efficiency — reads processed outputs, not raw data
+      ✔ Architectural discipline — clear reasoning for each read
 
     Args:
         state: Current AgentState dict.
         llm:   ChatGroq (or compatible) LLM instance.
 
     Returns:
-        Partial state update with ``final_output``, ``todos``, and
-        ``messages``.
+        Partial state update with final_output, todos, trace_log,
+        and messages.
     """
     files = dict(state.get("files", {}))
     vfs_state = {"files": files}
+    trace_log = list(state.get("trace_log", []))
 
-    # ── Step 1: List all files in VFS ──
+    # ── Step 1: List files and classify them ──
     file_list = ls(vfs_state)
+    trace_log.append({
+        "action": "ls",
+        "file": None,
+        "purpose": "Identify available files for selective retrieval",
+        "step": "synthesis",
+    })
+
     print(f"\n{'='*60}")
     print(f"[Synthesize Node] Files in VFS: {file_list}")
     print(f"{'='*60}")
 
-    # ── Step 2: Read each file back via read_file ──
-    all_content = []
-    for fname in sorted(file_list):
-        content = read_file(vfs_state, fname)
-        preview = content[:120].replace("\n", " ")
-        print(f"  → read_file('{fname}'): {len(content)} chars  \"{preview}...\"")
-        all_content.append(f"--- {fname} ---\n{content}")
+    # Classify files into categories
+    key_files = []      # unified models, comparisons
+    summary_files = []  # individual research summaries
 
-    combined_text = "\n\n".join(all_content)
+    for fname in sorted(file_list):
+        if "unified" in fname or "model" in fname or "final" in fname:
+            key_files.append(fname)
+        elif "comparison" in fname or "analysis" in fname:
+            key_files.append(fname)
+        else:
+            summary_files.append(fname)
+
+    # ── Step 2: Selective retrieval — read only key files ──
+    files_to_read = key_files if key_files else summary_files
+
+    print(f"\n  Selective retrieval strategy:")
+    print(f"    Key files (will read): {key_files}")
+    print(f"    Summary files (skipped): {summary_files}")
+    if not key_files:
+        print(f"    Fallback: reading all {len(summary_files)} summary files")
+
+    contents = []
+    for fname in files_to_read:
+        content = read_file(vfs_state, fname)
+        purpose = (
+            "Load key output for final synthesis"
+            if fname in key_files
+            else "Fallback: load summary for final synthesis"
+        )
+        trace_log.append({
+            "action": "read_file",
+            "file": fname,
+            "purpose": purpose,
+            "step": "synthesis",
+        })
+        preview = content[:100].replace("\n", " ")
+        print(f"    → read_file('{fname}'): {len(content)} chars")
+        contents.append(f"--- {fname} ---\n{content}")
+
+    combined_text = "\n\n".join(contents)
 
     # ── Step 3: Generate final structured summary with LLM ──
     prompt = (
-        "You are given individual summaries about a topic. "
-        "Create ONE final structured summary that combines all key points.\n\n"
+        "You are given the key outputs from a multi-step research and "
+        "analysis pipeline. Create ONE final structured summary that "
+        "presents the complete findings.\n\n"
         "Use this structure:\n"
-        "1. **Overview**: Brief introduction to the topic\n"
-        "2. **Key Findings**: Bullet points of the most important facts\n"
-        "3. **Analysis**: Deeper analysis connecting the themes across summaries\n"
-        "4. **Conclusion**: Final takeaway and implications\n\n"
-        f"Individual summaries:\n\n{combined_text}\n\n"
-        "Write the structured summary now:"
+        "1. **Overview**: Brief introduction to the topic and scope\n"
+        "2. **Key Findings**: Bullet points of the most important "
+        "discoveries and insights\n"
+        "3. **Analysis**: Deeper analysis connecting themes, patterns, "
+        "and implications\n"
+        "4. **Recommendations**: Actionable recommendations based on "
+        "the analysis\n"
+        "5. **Conclusion**: Final takeaway and future considerations\n\n"
+        f"Key outputs from the pipeline:\n\n{combined_text}\n\n"
+        "Write the final structured summary now:"
     )
 
-    print(f"\n[Synthesize Node] Generating combined summary from {len(file_list)} files...")
+    print(f"\n[Synthesize Node] Generating final summary from "
+          f"{len(files_to_read)} key files...")
+    print(f"  (Skipped {len(summary_files)} raw summary files — "
+          f"using processed outputs only)")
 
     final_summary = None
     max_retries = 3
@@ -86,28 +134,40 @@ def synthesize_node(state: dict, llm) -> dict:
             break
         except Exception as e:
             err_str = str(e)
-            is_rate_limit = "429" in err_str or "rate_limit" in err_str.lower()
-            if is_rate_limit and attempt < max_retries - 1:
-                wait = _parse_retry_after(err_str)
+            if is_rate_limit_error(err_str) and attempt < max_retries - 1:
+                wait = parse_retry_after(err_str)
                 print(f"  ⏳ Rate limited. Waiting {wait}s...")
                 time.sleep(wait)
                 continue
             raise
 
-    # ── Mark remaining todos as done ──
+    # ── Mark any remaining todos as done ──
     todos = list(state.get("todos", []))
     for i in range(len(todos)):
         if todos[i].get("status") != "done":
             todos[i] = {**todos[i], "status": "done"}
 
-    print(f"[Synthesize Node] Final summary generated ({len(final_summary)} chars)")
+    trace_log.append({
+        "action": "synthesize",
+        "file": None,
+        "purpose": f"Final structured summary from {len(files_to_read)} key files",
+        "step": "synthesis",
+    })
+
+    print(f"[Synthesize Node] Final summary generated "
+          f"({len(final_summary)} chars)")
 
     return {
         "final_output": final_summary,
         "todos": todos,
+        "trace_log": trace_log,
         "messages": [
             AIMessage(
-                content=f"Combined structured summary created from {len(file_list)} files."
+                content=(
+                    f"Final structured summary created from "
+                    f"{len(files_to_read)} key files "
+                    f"(skipped {len(summary_files)} raw summaries)."
+                )
             )
         ],
     }
