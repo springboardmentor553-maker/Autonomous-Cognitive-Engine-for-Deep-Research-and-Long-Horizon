@@ -12,6 +12,7 @@ llm = ChatGoogleGenerativeAI(
 def reflect_on_step(state: ExecutionState) -> ExecutionState:
     """
     Reflect on the most recently executed step.
+    Adds evaluation notes.
     """
 
     if not state["step_outputs"]:
@@ -20,6 +21,8 @@ def reflect_on_step(state: ExecutionState) -> ExecutionState:
     latest_output = state["step_outputs"][-1]
     latest_step_index = state["current_step"] - 1
     latest_step = state["todos"][latest_step_index]["task"]
+
+    print("\n[REFLECTION NODE] Evaluating Step", latest_step_index + 1)
 
     response = llm.invoke(
         f"""
@@ -31,12 +34,12 @@ Step:
 Execution Output:
 {latest_output}
 
-Evaluate:
-- Is the output complete?
-- Is it logically consistent?
-- Is anything missing?
+Evaluate briefly:
+- Completeness
+- Logical consistency
+- Missing elements (if any)
 
-Respond briefly with evaluation and suggestions.
+Keep answer concise.
 """
     )
 

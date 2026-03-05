@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from graphs.execution_state import ExecutionState
+from .execution_state import ExecutionState
 import os
+import time
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
@@ -8,38 +9,54 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GOOGLE_API_KEY"),
 )
 
+MAX_RETRIES = 2
+
 
 def execute_step(state: ExecutionState) -> ExecutionState:
     """
-    Executes one step from the TODO list.
+    Executes one step from the todo list.
+    Includes retry logic and execution tracking.
     """
 
-    todos = state["todos"]
-    current_index = state["current_step"]
-
-    # If all steps are completed, return state
-    if current_index >= len(todos):
+    if state["current_step"] >= len(state["todos"]):
         return state
 
-    step_text = todos[current_index]["task"]
+    step_index = state["current_step"]
+    step_task = state["todos"][step_index]["task"]
 
-    print(f"\nExecuting Step {current_index + 1}: {step_text}")
+    print("\n" + "-" * 60)
+    print(f"[EXECUTOR NODE] Executing Step {step_index + 1}")
+    print(f"Task: {step_task}")
+    print("-" * 60)
 
-    response = llm.invoke(
-        f"""
-You are executing a step from a structured plan.
+    retries = 0
+    start_time = time.time()
 
-Step:
-{step_text}
+    while retries <= MAX_RETRIES:
+        try:
+            response = llm.invoke(step_task)
+            output = response.content
 
-Provide a detailed and precise execution output.
-"""
-    )
+            # Quality gate
+            if len(output.split()) < 20:
+                output += "\n\n[Notice: Output may be too brief]"
 
-    # Store output
-    state["step_outputs"].append(response.content)
+            state["step_outputs"].append(output)
+            state["execution_count"] += 1
+            state["current_step"] += 1
 
-    # Move to next step
+            end_time = time.time()
+            print(f"[STEP COMPLETED] Time Taken: {round(end_time - start_time, 2)} sec")
+
+            return state
+
+        except Exception as e:
+            retries += 1
+            print(f"[RETRY {retries}] Error: {e}")
+
+    # If all retries fail
+    state["step_outputs"].append("Execution failed after retries.")
     state["current_step"] += 1
+    state["execution_count"] += 1
 
     return state

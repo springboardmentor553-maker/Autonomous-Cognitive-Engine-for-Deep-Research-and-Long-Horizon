@@ -6,6 +6,7 @@ LangChain 1.x + LangGraph 1.x + Gemini
 import os
 import ast
 import json
+import time
 from typing import Dict
 from dotenv import load_dotenv
 
@@ -120,39 +121,34 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
 # Full Cognitive Flow 
 # -------------------------
 def run_full_agent(task: str):
-    """
-    Full pipeline:
-    1. Planning (Milestone 1)
-    2. Step-by-step execution
-    3. Final synthesis
-    """
 
-    # Step 1 — Planning
+    start_time = time.time()
+
     planner_agent = create_planning_agent()
     planning_result = run_agent(planner_agent, task)
 
     todos = planning_result["todos"]
 
-    # Safety check
     if not todos:
         print("⚠️ No todos generated. Execution aborted.")
         return None
 
-    # Step 2 — Build execution graph
     execution_graph = build_execution_graph()
 
-    # Step 3 — Initialize execution state
     initial_state = {
         "task": task,
         "todos": todos,
         "current_step": 0,
+        "execution_count": 0,
         "step_outputs": [],
         "reflection_notes": [],
         "final_answer": ""
     }
 
-    # Step 4 — Execute full workflow
     final_state = execution_graph.invoke(initial_state)
+
+    end_time = time.time()
+    print(f"\n[PIPELINE COMPLETED] Total Time: {round(end_time - start_time, 2)} seconds")
 
     return final_state
 

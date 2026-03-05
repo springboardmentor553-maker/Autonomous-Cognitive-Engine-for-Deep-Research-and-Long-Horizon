@@ -10,6 +10,7 @@ class ExecutionState(TypedDict):
     task: str
     todos: List[Dict]
     current_step: int
+    execution_count: int  # <-- Added metadata tracking
     step_outputs: List[str]
     reflection_notes: List[str]
     final_answer: str
