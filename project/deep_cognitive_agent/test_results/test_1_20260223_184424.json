@@ -1,0 +1,51 @@
+{
+    "test_number": 1,
+    "input": "Create a research outline for renewable energy trends",
+    "timestamp": "2026-02-23T18:44:24.202525",
+    "result": {
+        "messages": [
+            {
+                "role": "human",
+                "content": "Create a research outline for renewable energy trends",
+                "name": null
+            },
+            {
+                "role": "ai",
+                "content": "",
+                "name": null
+            },
+            {
+                "role": "tool",
+                "content": "{\"todos\": [{\"task\": \"Define research objectives\", \"status\": \"pending\"}, {\"task\": \"Conduct literature review\", \"status\": \"pending\"}, {\"task\": \"Identify key trends and technologies\", \"status\": \"pending\"}, {\"task\": \"Analyze industry reports and data\", \"status\": \"pending\"}, {\"task\": \"Develop a comprehensive research outline\", \"status\": \"pending\"}]}",
+                "name": "write_todos"
+            },
+            {
+                "role": "ai",
+                "content": "The plan is to define research objectives, conduct a literature review, identify key trends and technologies, analyze industry reports and data, and develop a comprehensive research outline for the research on renewable energy trends.",
+                "name": null
+            }
+        ],
+        "todos": [
+            {
+                "task": "Define research objectives",
+                "status": "pending"
+            },
+            {
+                "task": "Conduct literature review",
+                "status": "pending"
+            },
+            {
+                "task": "Identify key trends and technologies",
+                "status": "pending"
+            },
+            {
+                "task": "Analyze industry reports and data",
+                "status": "pending"
+            },
+            {
+                "task": "Develop a comprehensive research outline",
+                "status": "pending"
+            }
+        ]
+    }
+}
