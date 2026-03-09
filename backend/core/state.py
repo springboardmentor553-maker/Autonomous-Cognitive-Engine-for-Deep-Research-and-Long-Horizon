@@ -1,11 +1,13 @@
-from typing import List, Dict, Any
-from dataclasses import dataclass, field
-@dataclass
-class AgentState:
-    goal: str
-    todos: List[str] = field(default_factory=list)
-    completed: List[str] = field(default_factory=list)
-    memory: List[str] = field(default_factory=list)
-    artifacts: Dict[str, Any] = field(default_factory=dict)
-    reflection: str = ""
-    score: float = 0.0
+from typing import TypedDict, List, Dict, Any
+
+
+class CognitiveState(TypedDict):
+    objective: str
+    plan: List[str]
+    current_task: str
+    completed_tasks: List[str]
+    research_data: List[str]
+    summaries: List[str]
+    code_outputs: List[str]
+    files: Dict[str, str]
+    evaluation: Dict[str, Any]

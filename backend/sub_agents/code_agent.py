@@ -1,2 +1,8 @@
-def generate_code(task: str):
-    return f"Generated code solution for: {task}"
+def code_agent(state):
+    """
+    Placeholder code agent
+    """
+
+    print("Code agent executed")
+
+    return state

@@ -1,4 +1,14 @@
+# Virtual environments
+venv/
 .venv/
-**/__pycache__/
-project/deep_cognitive_agent/.env
-project/deep_cognitive_agent/outputs/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Project runtime data
+memory/
+outputs/
