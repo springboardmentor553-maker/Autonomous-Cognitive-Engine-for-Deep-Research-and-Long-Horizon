@@ -5,13 +5,6 @@ This script tests the ReAct planning agent with 5 complex inputs
 and saves the generated todos to outputs/*.json files.
 
 Test Inputs:
-<<<<<<< HEAD
-1. Create a research outline for renewable energy trends
-2. Design a structured learning roadmap for data science
-3. Break down the steps for developing a web application
-4. Plan a comparative study between electric and hydrogen vehicles
-5. Create a technical writing outline for AI ethics
-=======
 1. Comparative study of EV vs Hydrogen vehicles
 2. Build an AI chatbot architecture
 3. Stock market research strategy
@@ -19,7 +12,6 @@ Test Inputs:
 5. AI agents in healthcare report
 6. Develop a roadmap for DSA
 7. Breakdown the process of deploying the machine learning model 
->>>>>>> milestone-1-planner
 """
 
 import os
@@ -37,24 +29,11 @@ load_dotenv()
 
 # Enable LangSmith Tracing
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-<<<<<<< HEAD
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
-=======
 os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "Milestone1-Planning")
->>>>>>> milestone-1-planner
 
 from app import create_planning_agent, run_agent, save_result_to_json
 
 
-<<<<<<< HEAD
-# Test inputs — 5 complex tasks as specified in Milestone 1
-TEST_INPUTS = [
-    "Create a research outline for renewable energy trends",
-    "Design a structured learning roadmap for data science",
-    "Break down the steps for developing a web application",
-    "Plan a comparative study between electric and hydrogen vehicles",
-    "Create a technical writing outline for AI ethics",
-=======
 # Test inputs as specified
 TEST_INPUTS = [
     "Comparative study of EV vs Hydrogen vehicles",
@@ -64,7 +43,6 @@ TEST_INPUTS = [
     "AI agents in healthcare report",
     "Develop a roadmap for DSA",
     "Breakdown the process of deploying the machine learning model"
->>>>>>> milestone-1-planner
 ]
 
 
@@ -88,11 +66,7 @@ def run_all_tests():
     # Run each test
     for i, task in enumerate(TEST_INPUTS, 1):
         print("-" * 70)
-<<<<<<< HEAD
-        print(f"TEST {i}/5: {task}")
-=======
         print(f"TEST {i}/7: {task}")
->>>>>>> milestone-1-planner
         print("-" * 70)
         
         try:

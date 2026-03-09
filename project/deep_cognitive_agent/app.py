@@ -1,307 +1,122 @@
-"""
-Main Application - Milestone 1: ReAct Planning Agent
-
-This implements a strict planning agent that:
-- MUST call write_todos tool first for any complex task
-<<<<<<< HEAD
-- Uses Groq (Llama 3.3 70B free tier) to dynamically generate TODO steps
-=======
-- Uses LLM dynamically to generate TODO steps
->>>>>>> milestone-1-planner
-- Stores todos in LangGraph state
-- Never answers directly without planning first
-- Has LangSmith tracing enabled
-"""
-
+# Updated app.py
 import os
 import json
-<<<<<<< HEAD
-from typing import List, Dict
-from dotenv import load_dotenv
-
-# Load environment variables from .env file BEFORE any LangChain imports
-load_dotenv()
-
-# Enable LangSmith Tracing
-os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "milestone_1_planning")
-
-from langchain_groq import ChatGroq
-=======
 import ast
-import time
 from typing import List, Dict
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Enable LangSmith Tracing
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "Milestone1-Planning")
+# Set project name for Milestone 2
+os.environ["LANGCHAIN_PROJECT"] = "Milestone2-ContextOffloading"
 
-# from langchain_openai import ChatOpenAI
->>>>>>> milestone-1-planner
 from langchain_core.tools import Tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
-
-# Import the dynamic write_todos function
-from tools.planning.write_todos import write_todos, planning_prompt
-from graphs.state import AgentState
-
-
-<<<<<<< HEAD
-# Initialize LLM (Groq free tier - Llama 3.3 70B)
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0,
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-)
-=======
-# Initialize LLM
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+# Import Existing Planning Tool
+from tools.planning.write_todos import write_todos
+# Import New Milestone 2 Tools
+from tools.execution.file_tools import write_file, read_file, ls, edit_file
+
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
->>>>>>> milestone-1-planner
 
+# Registering all tools
+# Note: creating a list of tools including your Milestone 1 tool
+tools = [write_todos, write_file, read_file, ls, edit_file]
 
-# Create the write_todos tool with strong description
-write_todos_tool = Tool(
-    name="write_todos",
-    func=write_todos,
-<<<<<<< HEAD
-    description=(
-        "Use this tool to decompose complex tasks into structured to-do lists "
-        "before any execution. This tool MUST be called for complex tasks. "
-        "Input: The complex task description as a string. "
-        "Output: A dict with a 'todos' key containing a list of structured "
-        "TODO items, each with 'task' and 'status' fields."
-    ),
-)
+# ENHANCED SYSTEM PROMPT (Based on Mentor Notes)
+SYSTEM_PROMPT = """You are an Intelligent Research Agent.
 
+PHASE 1: PLANNING
+- You MUST call 'write_todos' FIRST for any complex task.
 
-# ── System prompt — enforces strict ReAct planning discipline ──
-SYSTEM_PROMPT = """You are a strict ReAct planning agent for Milestone 1.
+PHASE 2: CONTEXT OFFLOADING
+- Do NOT store raw data in your memory. Summarize and use 'write_file'.
+- Use 'ls' to see what files you have.
+- Use 'read_file' SELECTIVELY. Only load the specific files needed for your current thought.
+- Use 'edit_file' to refine existing notes.
 
-ABSOLUTE RULES — you must follow every one of these without exception:
-
-1. For ANY complex task the user gives you, you MUST call the write_todos tool FIRST.
-2. You MUST NOT answer the user directly or generate your own list of steps.
-3. You MUST NOT skip planning or attempt to execute any task.
-4. Milestone 1 only requires decomposition into structured todos — do NOT execute tasks.
-5. After calling write_todos, report the structured TODO list returned by the tool.
-   Do NOT add, remove, or reword the steps.
-
-ReAct discipline:
-  - THINK: reason briefly about what tool to call.
-  - ACT: call write_todos with the user's task.
-  - OBSERVE: read the structured todos returned.
-  - RESPOND: present the todos to the user exactly as returned.
-
-If the write_todos tool is not called, the response is INVALID."""
-=======
-    description="""
-Use this tool whenever the user gives a complex task or request.
-This tool MUST be called FIRST before doing anything else.
-It breaks down the task into structured, actionable TODO steps.
-DO NOT attempt to answer the user directly - always use this tool first.
-Input: The complex task description as a string.
-Output: A list of structured TODO items with task and status fields.
+Success Criteria:
+- No context window explosion.
+- Meaningful file names.
+- Minimal confirmation responses after writing.
 """
-)
-
-
-# System prompt that enforces tool usage
-SYSTEM_PROMPT = """You are a strict planning agent.
-
-IMPORTANT RULES:
-1. You MUST call the write_todos tool FIRST for ANY user request.
-2. NEVER answer the user directly without calling write_todos first.
-3. The write_todos tool will break down the task into actionable steps.
-4. After calling write_todos, report the generated plan to the user.
-5. Do not skip the planning step under any circumstances.
-
-When a user gives you a task:
-1. Immediately call write_todos with the task
-2. Present the generated TODO list to the user
-3. Do not add your own analysis without using the tool first
-"""
->>>>>>> milestone-1-planner
-
 
 def create_planning_agent():
-    """
-    Create and return the ReAct planning agent with write_todos tool.
-    """
-    # Create memory saver for checkpointing (optional but useful)
     memory = MemorySaver()
-<<<<<<< HEAD
-
-    # Create the ReAct agent. The system behavior is injected later as a
-    # system message when we call the agent, since this version of
-    # create_react_agent no longer accepts system_prompt/state_modifier.
-=======
-    
-    # Create the ReAct agent
->>>>>>> milestone-1-planner
+    # Updated to include all tools and the new prompt
     agent = create_react_agent(
         model=llm,
-        tools=[write_todos_tool],
+        tools=tools,
         checkpointer=memory,
-<<<<<<< HEAD
-=======
-        prompt=SYSTEM_PROMPT  # <--- Renamed to 'prompt'
->>>>>>> milestone-1-planner
+        prompt=SYSTEM_PROMPT
     )
-    
     return agent
 
-
+# --- I have kept your run_agent and save_result_to_json functions identical to your M1 code ---
 def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
-    """
-    Run the planning agent on a task and return the result with todos.
-    
-    Args:
-        agent: The ReAct agent instance
-        task: The complex task to plan
-        thread_id: Unique thread identifier for conversation
-        
-    Returns:
-        Dict with 'messages' and 'todos' from the final state
-    """
-    # Configuration for the agent run
     config = {"configurable": {"thread_id": thread_id}}
-    
-<<<<<<< HEAD
-    # Input messages: include a system message so the agent is
-    # instructed to ALWAYS call write_todos first and never answer
-    # directly.
-    input_message = {"messages": [("system", SYSTEM_PROMPT), ("user", task)]}
-=======
-    # Input message
     input_message = {"messages": [("user", task)]}
->>>>>>> milestone-1-planner
-    
-    # Run the agent and collect the final state
     final_state = None
     todos = []
     
+    # We use stream to capture the tool calls properly
     for event in agent.stream(input_message, config, stream_mode="values"):
         final_state = event
-        
-        # Check for tool messages that contain todos
         if "messages" in event:
             for msg in event["messages"]:
-                # Check if this is a tool message from write_todos
                 if hasattr(msg, 'name') and msg.name == "write_todos":
                     try:
-<<<<<<< HEAD
                         content = msg.content
                         if isinstance(content, str):
-                            parsed = json.loads(content)
-                        elif isinstance(content, dict):
-                            parsed = content
-                        else:
-                            parsed = {}
-
-                        # Handle {"todos": [...]} format from write_todos
-                        if isinstance(parsed, dict) and "todos" in parsed:
-                            todos = parsed["todos"]
-                        elif isinstance(parsed, list):
-                            todos = parsed
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-    
-    # If we successfully extracted todos, also attach them to the
-    # underlying LangGraph state object so that state["todos"] is
-    # populated in addition to our returned result dictionary.
-    if final_state is not None and todos:
-        final_state["todos"] = todos
-
-=======
-                        # Parse the tool output
-                        content = msg.content
-                        if isinstance(content, str):
-                            # ✅ SECURITY FIX: Using ast.literal_eval instead of eval
-                            # We also strip the content to handle any accidental whitespace
                             clean_content = content.strip()
                             todos = ast.literal_eval(clean_content) if clean_content.startswith('[') else []
                         elif isinstance(content, list):
                             todos = content
                     except:
                         pass
-    
->>>>>>> milestone-1-planner
-    # Build result
-    result = {
+    return {
         "task": task,
         "messages": final_state.get("messages", []) if final_state else [],
         "todos": todos
     }
-    
-    return result
-
 
 def save_result_to_json(result: Dict, filename: str, output_dir: str = "outputs"):
-    """
-    Save the agent result to a JSON file.
-    
-    Args:
-        result: The result dictionary from run_agent
-        filename: Name of the output file
-        output_dir: Directory to save outputs (created if doesn't exist)
-    """
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
-    
-    # Prepare serializable result
     serializable_result = {
         "task": result["task"],
         "todos": result["todos"],
         "message_count": len(result["messages"])
     }
-    
-    # Add final assistant message if available
     for msg in reversed(result["messages"]):
         if hasattr(msg, 'content') and hasattr(msg, 'type') and msg.type == "ai":
             serializable_result["final_response"] = msg.content
             break
-    
-    # Save to JSON
     filepath = os.path.join(output_dir, filename)
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(serializable_result, f, indent=2, ensure_ascii=False)
-    
     print(f"Saved result to {filepath}")
     return filepath
 
-
-# Main execution
 if __name__ == "__main__":
     print("=" * 60)
-    print("Milestone 1: ReAct Planning Agent")
+    print("Milestone 2: Context Offloading Engine")
     print("=" * 60)
     
-    # Create the agent
     agent = create_planning_agent()
     
-    # Test task
-    test_task = "Build an AI chatbot architecture"
+    # Mentor's test case: Process 3 distinct pieces of info
+    test_task = """
+    I have three reports:
+    1. Climate report: Global temps rose 1.2C.
+    2. Energy report: Solar usage is up 20%.
+    3. Policy report: New green tax implemented.
     
-    print(f"\nTask: {test_task}")
-    print("-" * 40)
+    Summarize each into separate files, then read ONLY the climate and energy files 
+    to tell me the correlation between temp rise and solar adoption.
+    """
     
-    # Run the agent
-    result = run_agent(agent, test_task, thread_id="test-1")
-    
-    # Display todos
-    print("\nGenerated TODOs:")
-    for i, todo in enumerate(result["todos"], 1):
-        print(f"  {i}. {todo['task']} [{todo['status']}]")
-    
-    # Save to JSON
-    save_result_to_json(result, "test_output.json")
-    
-    print("\n" + "=" * 60)
-    print("Agent run complete. Check LangSmith for traces.")
-    print("=" * 60)
+    result = run_agent(agent, test_task, thread_id="m2-test-1")
+    save_result_to_json(result, "m2_output.json")
