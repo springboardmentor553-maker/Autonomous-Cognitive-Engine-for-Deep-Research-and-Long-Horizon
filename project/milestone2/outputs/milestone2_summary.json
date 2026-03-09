@@ -1,0 +1,58 @@
+[
+  {
+    "id": "task_01",
+    "label": "Climate Change: 3-Doc Summary + Final Synthesis",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 3.6
+  },
+  {
+    "id": "task_02",
+    "label": "Renewable Energy: 5 Policy Docs -> Differences + Framework",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 2.1
+  },
+  {
+    "id": "task_03",
+    "label": "Selective Policy Comparison: Germany vs India Only",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 1.8
+  },
+  {
+    "id": "task_04",
+    "label": "Draft Refinement: write_file -> read_file -> edit_file",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 2.4
+  },
+  {
+    "id": "task_05",
+    "label": "AI Ethics: 4 Frameworks -> Unified Model -> Sustainability Refinement",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 2.3
+  },
+  {
+    "id": "task_06",
+    "label": "Scaling Test: 4-Doc Cybersecurity Chain",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 1.5
+  },
+  {
+    "id": "task_07",
+    "label": "Full Eval Pattern: write->write->ls->read->read->write->read->edit",
+    "status": "✅ OK",
+    "todos": 0,
+    "files": 0,
+    "time_s": 2.1
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "task": "Execute this task using your tools:\n\nStore 5 country policy summaries, then compare ONLY Germany and India.\n\nUse tools:\n1. write_todos with this task\n2. write_file('USA.txt|USA: Tax incentives, market-driven solar and wind.')\n3. write_file('Germany.txt|Germany: 80% renewable by 2030, offshore wind, grid modernization.')\n4. write_file('India.txt|India: 500 GW renewable target, rural solar, climate finance.')\n5. write_file('China.txt|China: State-led solar manufacturing and hydropower.')\n6. write_file('Brazil.txt|Brazil: Hydropower base, biofuels, offshore wind.')\n7. ls('') to list files\n8. read_file('Germany.txt') — only Germany needed\n9. read_file('India.txt') — only India needed\n10. write_file('germany_india_comparison.txt|<comparison of Germany vs India only>')",
+  "todos": [],
+  "files": {},
+  "message_count": 2,
+  "final_response": ""
+}
