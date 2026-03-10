@@ -1,12 +1,32 @@
-from typing import List, Dict
-from dataclasses import dataclass, field
+"""
+state.py - LangGraph State Definition for Deep Cognitive Task Framework
+Milestone 1: Foundational Agent & Task Planning
+"""
 
-@dataclass
-class AgentState:
+from typing import Annotated
+from langgraph.graph.message import add_messages
+from typing_extensions import TypedDict
+
+
+class TodoItem(TypedDict):
+    id: str
+    task: str
+    status: str   # "pending" | "in_progress" | "completed"
+    notes: str
+
+
+class AgentState(TypedDict):
     """
-    Represents the internal state of the agent.
-    This will later be managed by LangGraph.
+    The shared state for the Deep Cognitive Agent.
+
+    - messages            : Full conversation + tool message history
+    - todos               : Structured list of TodoItem dicts (the agent's plan)
+    - current_task        : The task currently being worked on
+    - final_output        : Final synthesized result
+    - write_todos_invoked : Tracks whether write_todos was called (used by evaluator)
     """
-    user_task: str
-    todos: List[Dict] = field(default_factory=list)
-    status: str = "initialized"
+    messages: Annotated[list, add_messages]
+    todos: list[TodoItem]
+    current_task: str
+    final_output: str
+    write_todos_invoked: bool
