@@ -30,6 +30,11 @@ def is_rate_limit_error(err_str: str) -> bool:
     return "429" in err_str or "rate_limit" in err_str.lower()
 
 
+def is_server_overload_error(err_str: str) -> bool:
+    """Check if an error string indicates a transient server overload (503)."""
+    return "503" in err_str or "over capacity" in err_str.lower() or "overloaded" in err_str.lower()
+
+
 def invoke_with_retry(llm, prompt: str, max_retries: int = 3) -> str:
     """Invoke an LLM with automatic rate-limit retry.
 
@@ -47,12 +52,19 @@ def invoke_with_retry(llm, prompt: str, max_retries: int = 3) -> str:
             return response.content
         except Exception as e:
             err_str = str(e)
-            if is_rate_limit_error(err_str) and attempt < max_retries - 1:
-                wait = parse_retry_after(err_str)
-                print(f"  ⏳ Rate limited. Waiting {wait}s before retry "
-                      f"{attempt + 2}/{max_retries}...")
-                time.sleep(wait)
-                continue
+            if attempt < max_retries - 1:
+                if is_rate_limit_error(err_str):
+                    wait = parse_retry_after(err_str)
+                    print(f"  ⏳ Rate limited. Waiting {wait}s before retry "
+                          f"{attempt + 2}/{max_retries}...")
+                    time.sleep(wait)
+                    continue
+                if is_server_overload_error(err_str):
+                    wait = min(2 ** attempt * 10, 60)
+                    print(f"  ⏳ Server overloaded (503). Waiting {wait}s before retry "
+                          f"{attempt + 2}/{max_retries}...")
+                    time.sleep(wait)
+                    continue
             raise
 
 

@@ -25,7 +25,7 @@ from langchain_core.messages import AIMessage
 from tools.vfs.write_file import write_file
 from tools.vfs.read_file import read_file
 from tools.vfs.edit_file import edit_file
-from utils.helpers import parse_retry_after, is_rate_limit_error
+from utils.helpers import parse_retry_after, is_rate_limit_error, is_server_overload_error
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -38,11 +38,17 @@ def _invoke_llm_with_retry(llm, prompt: str, max_retries: int = 3) -> str:
             return response.content
         except Exception as e:
             err_str = str(e)
-            if is_rate_limit_error(err_str) and attempt < max_retries - 1:
-                wait = parse_retry_after(err_str)
-                print(f"  ⏳ Rate limited. Waiting {wait}s...")
-                time.sleep(wait)
-                continue
+            if attempt < max_retries - 1:
+                if is_rate_limit_error(err_str):
+                    wait = parse_retry_after(err_str)
+                    print(f"  ⏳ Rate limited. Waiting {wait}s...")
+                    time.sleep(wait)
+                    continue
+                if is_server_overload_error(err_str):
+                    wait = min(2 ** attempt * 10, 60)
+                    print(f"  ⏳ Server overloaded (503). Waiting {wait}s...")
+                    time.sleep(wait)
+                    continue
             raise
 
 

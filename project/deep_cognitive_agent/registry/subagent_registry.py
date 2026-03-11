@@ -1,8 +1,9 @@
 """
-Sub-Agent Registry - Registry for managing available sub-agents.
+Sub-Agent Registry - Milestone 3: Multi-Agent Collaboration
 
-Provides a central location to register, discover, and
-instantiate sub-agents (research, summarizer, etc.).
+Central registry for managing available sub-agents.
+Provides registration, discovery, instantiation, and listing
+of specialized agents (researcher, summarizer, comparator, etc.).
 """
 
 from typing import Dict, Optional, Type
@@ -42,5 +43,26 @@ class SubAgentRegistry:
         return agent_class(llm, **kwargs)
 
 
-# Global registry instance
+# ── Global registry instance ─────────────────────────────────────────
 registry = SubAgentRegistry()
+
+
+def build_registry():
+    """Register all available sub-agents in the global registry.
+
+    This is called once at startup to populate the registry with
+    all specialized sub-agents for Milestone 3.
+    """
+    from agents.subagents.research_agent import ResearchAgent
+    from agents.subagents.summarizer_agent import SummarizerAgent
+    from agents.subagents.comparator_agent import ComparatorAgent
+    from agents.subagents.unifier_agent import UnifierAgent
+    from agents.subagents.refiner_agent import RefinerAgent
+
+    registry.register("researcher", ResearchAgent)
+    registry.register("summarizer", SummarizerAgent)
+    registry.register("comparator", ComparatorAgent)
+    registry.register("unifier", UnifierAgent)
+    registry.register("refiner", RefinerAgent)
+
+    return registry
