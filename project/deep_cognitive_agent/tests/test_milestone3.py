@@ -7,9 +7,11 @@ This test verifies multi-agent architecture maturity:
   3. Trace log shows delegate_task actions with agent attribution
   4. Multiple distinct agents are used in a single workflow
   5. All Milestone 2 features preserved (VFS, selective retrieval, edit_file)
-  6. Supervisor does NOT execute — only delegates
-  7. Final output produced via synthesis from delegated results
-  8. Clean dependency chain maintained across agent boundaries
+  6. Supervisor coordinates — delegates specialized tasks, self-handles trivial ones
+  7. Delegation reasoning recorded in trace log
+  8. Result integration validates sub-agent outputs before state update
+  9. Final output produced via synthesis from delegated results
+  10. Clean dependency chain maintained across agent boundaries
 """
 
 import os
@@ -164,7 +166,27 @@ def test_multi_agent_pipeline(task: str):
         warnings.append("Researcher agent not explicitly found in trace")
         print(f"  ⚠️  {warnings[-1]}")
 
-    # 12. edit_file used for refinement (preserved from M2)
+    # 12. Delegation reasoning recorded in trace
+    reasoning_entries = [t for t in trace_log if t.get("delegation_reasoning")]
+    if reasoning_entries:
+        print(f"  ✅ Delegation reasoning active: {len(reasoning_entries)} reasoned decisions")
+        # Show sample reasoning
+        sample = reasoning_entries[0]["delegation_reasoning"]
+        print(f"      Sample: \"{sample[:70]}...\"")
+    else:
+        warnings.append("No delegation reasoning entries in trace")
+        print(f"  ⚠️  {warnings[-1]}")
+
+    # 13. Result integration (validated results — no empty content in files)
+    empty_files = [f for f, c in files.items() if len(c.strip()) < 10]
+    if not empty_files:
+        print(f"  ✅ Result integration verified — all {len(files)} files have valid content")
+    else:
+        msg = f"Result integration issue: files with insufficient content: {empty_files}"
+        print(f"  ❌ {msg}")
+        errors.append(msg)
+
+    # 14. edit_file used for refinement (preserved from M2)
     edit_actions = [t for t in trace_log if t.get("action") == "edit_file"]
     if edit_actions:
         print(f"  ✅ edit_file used {len(edit_actions)} time(s) — read→modify→edit verified")
@@ -172,7 +194,7 @@ def test_multi_agent_pipeline(task: str):
         warnings.append("No edit_file actions — refinement may not have triggered")
         print(f"  ⚠️  {warnings[-1]}")
 
-    # 13. Selective retrieval (preserved from M2)
+    # 15. Selective retrieval (preserved from M2)
     read_actions = [t for t in trace_log if t.get("action") == "read_file"]
     selective_reads = [t for t in read_actions
                        if "selective" in t.get("purpose", "").lower()]
@@ -186,7 +208,7 @@ def test_multi_agent_pipeline(task: str):
         print(f"  ❌ {msg}")
         errors.append(msg)
 
-    # 14. Dependency chain valid
+    # 16. Dependency chain valid
     write_files = [t["file"] for t in trace_log if t["action"] == "write_file"]
     read_files_list = [t["file"] for t in trace_log
                        if t["action"] == "read_file"]
@@ -197,7 +219,7 @@ def test_multi_agent_pipeline(task: str):
         warnings.append("Could not verify dependency chain in trace")
         print(f"  ⚠️  {warnings[-1]}")
 
-    # 15. Final output exists and is substantial
+    # 17. Final output exists and is substantial
     final_output = final_state.get("final_output", "")
     if len(final_output) > 100:
         print(f"  ✅ Final structured summary generated ({len(final_output)} chars)")
@@ -206,7 +228,7 @@ def test_multi_agent_pipeline(task: str):
         print(f"  ❌ {msg}")
         errors.append(msg)
 
-    # 16. Final output has structure markers
+    # 18. Final output has structure markers
     structure_markers = ["Overview", "Key Findings", "Analysis",
                          "Conclusion", "Recommendations"]
     found_markers = [m for m in structure_markers
@@ -248,10 +270,12 @@ def test_multi_agent_pipeline(task: str):
         "file_sizes": {k: len(v) for k, v in files.items()},
         "trace_log_length": len(trace_log),
         "delegation_count": len(delegation_actions),
+        "delegation_reasoning_count": len(reasoning_entries),
         "agents_used": list(agents_used),
         "edit_file_used": len(edit_actions) > 0,
         "selective_retrieval": len(selective_reads) > 0,
         "dependency_chain_valid": len(dep_reads) > 0,
+        "result_integration_valid": len(empty_files) == 0,
         "final_output_length": len(final_output),
         "structure_markers_found": found_markers,
         "errors": errors,

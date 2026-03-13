@@ -196,13 +196,19 @@ def _print_results(final_state: dict, task: str, elapsed: float):
     edit_count = sum(1 for t in trace_log if t["action"] == "edit_file")
     delegation_count = sum(1 for t in trace_log
                            if t["action"] == "delegate_task")
+    supervisor_count = sum(1 for t in trace_log
+                            if t["action"] == "supervisor_handle")
     ls_count = sum(1 for t in trace_log if t["action"] == "ls")
 
     # Count unique agents used
     agents_used = set(t.get("delegated_to", "")
                       for t in trace_log if t.get("delegated_to"))
 
+    # Count delegation reasoning entries
+    reasoned_entries = [t for t in trace_log if t.get("delegation_reasoning")]
+
     print(f"  delegate_task calls: {delegation_count}")
+    print(f"  supervisor_handle:   {supervisor_count}")
     print(f"  Unique agents used:  {agents_used if agents_used else 'none'}")
     print(f"  write_file calls:    {write_count}")
     print(f"  read_file calls:     {read_count}")
@@ -224,6 +230,16 @@ def _print_results(final_state: dict, task: str, elapsed: float):
         patterns.append(f"✔ Multi-agent collaboration ({len(agents_used)} agents used)")
     else:
         patterns.append("⚠ Limited agent diversity")
+
+    if reasoned_entries:
+        patterns.append(f"✔ Delegation reasoning active ({len(reasoned_entries)} reasoned decisions)")
+    else:
+        patterns.append("⚠ No delegation reasoning recorded")
+
+    if supervisor_count > 0:
+        patterns.append(f"✔ Over-delegation prevention ({supervisor_count} tasks self-handled)")
+    else:
+        patterns.append("✔ All tasks required specialist delegation (no trivial tasks)")
 
     if edit_count > 0:
         patterns.append("✔ edit_file used (read→modify→edit pattern)")
@@ -286,6 +302,10 @@ def _save_results(final_state: dict, task: str):
             "total_tool_calls": len(trace_log),
             "delegation_calls": sum(1 for t in trace_log
                                     if t["action"] == "delegate_task"),
+            "supervisor_handled": sum(1 for t in trace_log
+                                       if t["action"] == "supervisor_handle"),
+            "delegation_reasoning_count": sum(
+                1 for t in trace_log if t.get("delegation_reasoning")),
             "agents_used": agents_used,
             "write_calls": sum(1 for t in trace_log
                                if t["action"] == "write_file"),
