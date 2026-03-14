@@ -3,6 +3,8 @@ from .execution_state import ExecutionState
 import os
 import time
 
+from project.deep_cognitive_agent.tools.filesystem.write_file import write_file
+
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0,
@@ -15,7 +17,8 @@ MAX_RETRIES = 2
 def execute_step(state: ExecutionState) -> ExecutionState:
     """
     Executes one step from the todo list.
-    Includes retry logic and execution tracking.
+    Includes retry logic, execution tracking,
+    and context offloading via virtual file system.
     """
 
     if state["current_step"] >= len(state["todos"]):
@@ -41,7 +44,28 @@ def execute_step(state: ExecutionState) -> ExecutionState:
             if len(output.split()) < 20:
                 output += "\n\n[Notice: Output may be too brief]"
 
+            # Save output in memory
             state["step_outputs"].append(output)
+
+            # ---- Virtual File System Save (Milestone 2) ----
+            if "files" not in state:
+                state["files"] = {}
+
+            filename = f"step_{step_index + 1}.txt"
+
+            # Save to internal virtual filesystem
+            state["files"][filename] = output
+
+            # Call tool for LangSmith tracing
+            write_file.invoke({
+                "filename": filename,
+                "content": output,
+                "state": state
+            })
+
+            print(f"[FILE SAVED] {filename}")
+            # -----------------------------------------------
+
             state["execution_count"] += 1
             state["current_step"] += 1
 

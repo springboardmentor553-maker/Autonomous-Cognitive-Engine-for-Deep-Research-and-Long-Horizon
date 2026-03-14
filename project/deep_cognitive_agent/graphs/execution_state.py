@@ -3,14 +3,19 @@ from typing import List, Dict, TypedDict
 
 class ExecutionState(TypedDict):
     """
-    This represents the full execution memory of the agent.
-    Every node in the graph will read and modify this state.
+    Global memory for the cognitive agent.
     """
 
     task: str
     todos: List[Dict]
+
     current_step: int
-    execution_count: int  # <-- Added metadata tracking
+    execution_count: int
+
     step_outputs: List[str]
     reflection_notes: List[str]
+
     final_answer: str
+
+    # virtual file system
+    files: Dict[str, str]

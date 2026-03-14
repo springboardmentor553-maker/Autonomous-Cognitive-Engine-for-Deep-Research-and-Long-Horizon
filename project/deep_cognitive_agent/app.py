@@ -21,6 +21,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from project.deep_cognitive_agent.tools.planning.write_todos import write_todos
 from project.deep_cognitive_agent.graphs.execution_graph import build_execution_graph
 
+from project.deep_cognitive_agent.tools.filesystem.write_file import write_file
+from project.deep_cognitive_agent.tools.filesystem.read_file import read_file
+from project.deep_cognitive_agent.tools.filesystem.edit_file import edit_file
+from project.deep_cognitive_agent.tools.filesystem.ls import ls
+
 # -------------------------
 # LLM (Gemini)
 # -------------------------
@@ -32,16 +37,15 @@ llm = ChatGoogleGenerativeAI(
 )
 
 # IMPORTANT: bind tools to model
-llm_with_tools = llm.bind_tools([write_todos])
+llm_with_tools = llm.bind_tools([
+    write_todos,
+    write_file,
+    read_file,
+    edit_file,
+    ls
+])
 
 
-# -------------------------
-# Tool Registration (1.x style)
-# -------------------------
-@tool
-def write_todos_tool(task: str):
-    """Break a complex task into structured TODO steps."""
-    return write_todos(task)
 
 
 # -------------------------
@@ -73,7 +77,13 @@ def create_planning_agent():
 
     agent = create_react_agent(
         model=llm_with_tools,
-        tools=[write_todos],
+        tools=[
+            write_todos,
+            write_file,
+            read_file,
+            edit_file,
+            ls
+        ],
         checkpointer=memory,
         prompt=SYSTEM_PROMPT,
     )
@@ -142,7 +152,8 @@ def run_full_agent(task: str):
         "execution_count": 0,
         "step_outputs": [],
         "reflection_notes": [],
-        "final_answer": ""
+        "final_answer": "",
+        "files": {}  
     }
 
     final_state = execution_graph.invoke(initial_state)
@@ -177,16 +188,21 @@ def save_result_to_json(result: Dict, filename: str, output_dir: str = "outputs"
 # Main
 # -------------------------
 if __name__ == "__main__":
-    print("=" * 60)
+    print("=" * 70)
     print("Milestone 2: Cognitive Execution Engine")
-    print("=" * 60)
+    print("=" * 70)
 
-    task = "Build an AI chatbot architecture"
+    task = "Explain how a recommendation system works"
 
     result = run_full_agent(task)
 
     if result:
-        print("\nFINAL ANSWER:\n")
+        print("\n" + "=" * 70)
+        print("AUTONOMOUS AGENT FINAL REPORT")
+        print("=" * 70 + "\n")
+
         print(result["final_answer"])
 
-    print("\nDone.")
+        print("\n" + "=" * 70)
+
+    print("\nPipeline Execution Completed")
