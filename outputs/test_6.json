@@ -1,0 +1,29 @@
+{
+  "todos": [
+    {
+      "task": "Research and gather all necessary documents and information for permits, approvals, and insurance coverage",
+      "status": "pending"
+    },
+    {
+      "task": "Draft a detailed itinerary and submit it for review and feedback from relevant stakeholders",
+      "status": "pending"
+    },
+    {
+      "task": "Obtain quotes and purchase insurance coverage for the expedition, ensuring adequate protection for participants and equipment",
+      "status": "pending"
+    },
+    {
+      "task": "Collect and submit applications for necessary permits and approvals, following all relevant regulations and guidelines",
+      "status": "pending"
+    },
+    {
+      "task": "Verify and finalize all permits, approvals, and insurance coverage, ensuring compliance with all requirements and regulations",
+      "status": "pending"
+    },
+    {
+      "task": "Confirm and distribute the finalized itinerary to all stakeholders, including participants, guides, and support teams",
+      "status": "pending"
+    }
+  ],
+  "count": 6
+}
