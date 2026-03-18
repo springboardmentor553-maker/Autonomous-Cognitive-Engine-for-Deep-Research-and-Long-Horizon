@@ -2,24 +2,25 @@ import json
 from backend.tools.file_system_tools import write_file
 
 
-def write_todos(state, objective):
+def write_todos(objective):
 
-    tasks = [
-        "Research AI Applications",
-        "Review Medical Imaging AI",
-        "Examine Chatbots in Healthcare",
-        "Study Predictive Analytics",
-        "Analyze Clinical Decision Support",
-        "Document Findings and Insights"
-    ]
+    if "three" in objective.lower():
+        todos = [
+            {"task": "Medical Imaging Analysis"},
+            {"task": "Clinical Decision Support Systems"},
+            {"task": "AI Chatbots in Healthcare"},
+            {"task": "Final Summary"}
+        ]
+    else:
+        todos = [
+            {"task": "Medical Imaging Analysis"},
+            {"task": "Clinical Decision Support Systems"},
+            {"task": "AI Chatbots in Healthcare"},
+            {"task": "Predictive Analytics"},
+            {"task": "Telemedicine Platforms"},
+            {"task": "Final Summary"}
+        ]
 
-    state["todos"] = tasks
+    print("\n[PLANNING] TODO list created\n")
 
-    plan = {
-        "objective": objective,
-        "tasks": tasks
-    }
-
-    write_file("planning/task_plan.json", json.dumps(plan, indent=2))
-
-    return state
+    return todos

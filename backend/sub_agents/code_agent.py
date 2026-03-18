@@ -1,8 +1,5 @@
-def code_agent(state):
-    """
-    Placeholder code agent
-    """
+def code_agent(input_text):
 
-    print("Code agent executed")
+    print("SUBAGENT → Code Agent processing")
 
-    return state
+    return f"Code output for: {input_text}"
