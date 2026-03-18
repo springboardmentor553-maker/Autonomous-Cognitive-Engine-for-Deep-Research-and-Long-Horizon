@@ -1,60 +1,60 @@
 # Autonomous Cognitive Engine
 
-An autonomous planning and execution system that simulates a cognitive workflow for completing complex tasks.
-
-The system plans tasks, executes them using tools, stores artifacts in memory, and evaluates performance.
+An autonomous multi-agent system that plans, executes, and summarizes complex tasks.
 
 ---
 
-## Milestone Progress
+## Milestones
 
-### Milestone 1 — Core Cognitive Engine
-Implemented the core architecture of the autonomous system.
-
-Features:
-- Task planning module
-- Executor for tool-based actions
-- Search and delegation tools
-- Evaluation framework for task performance
-
----
+### Milestone 1 — Core Engine
+- Task planning module  
+- Execution framework  
+- Delegation and evaluation system  
 
 ### Milestone 2 — Virtual File System
+- Store and manage intermediate outputs  
+- Tools: `ls()`, `write_file()`, `read_file()`, `edit_file()`  
 
-Milestone 2 introduces a **Virtual File System** that allows the agent to store and manage files during execution.
-
-Available tools:
-
-```
-ls()          -> list stored files
-write_file()  -> create and store file content
-read_file()   -> read file contents
-edit_file()   -> update existing files
-```
-
-This enables the agent to **persist intermediate results and manage artifacts across tasks.**
+### Milestone 3 — Multi-Agent System
+- Research Agent (data collection)  
+- Analysis Agent (insight extraction)  
+- Summarizer Agent (final summaries)  
+- Final summary across all tasks  
 
 ---
 
-## Configuration
+## How It Works
 
-Create a `.env` file in the project root if API configuration is required.
-
-Example:
-
-```
-OPENROUTER_API_KEY=sk-...
-OPENROUTER_MODEL=mistralai/mistral-7b-instruct
-```
+1. User gives a complex objective  
+2. System creates a task plan  
+3. Each task runs through:
+   - Research → Analysis → Summary  
+4. Final summary is generated  
 
 ---
 
-## Running
-
-Activate the virtual environment and start the backend:
+## Run the Project
 
 ```bash
 python -m backend.main
 ```
 
-The system will execute evaluation tasks and display the results.
+---
+
+## Example
+
+**Input:**  
+Explain three applications of AI in healthcare  
+
+**Output:**  
+- Medical Imaging  
+- Decision Support Systems  
+- Chatbots  
+- Final Summary  
+
+---
+
+## Tech Stack
+- Python  
+- Multi-Agent Architecture  
+- Virtual File System  
