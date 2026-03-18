@@ -122,3 +122,92 @@ def build_graph():
     compiled = graph.compile()
     logger.info("✅ Graph compiled successfully")
     return compiled
+"""
+graph/build_graph.py — Builds and compiles the LangGraph StateGraph.
+
+Milestone 3:
+  - delegate_task added to ALL_TOOLS (supervisor can call it)
+  - Sub-agent registry logged on startup
+  - delegation_log in AgentState for LangSmith tracing
+"""
+
+from __future__ import annotations
+from langchain_groq import ChatGroq
+from langgraph.graph import END, START, StateGraph
+
+import config
+from graph.nodes import (
+    make_executor_node, make_planner_node,
+    make_synthesiser_node, make_task_complete_node, make_tools_node,
+)
+from graph.router import (
+    route_after_executor, route_after_planner,
+    route_after_task_complete, route_after_tools,
+)
+from state import AgentState
+from tools import ALL_TOOLS
+from tools.filesystem import bind_vfs
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+def build_graph():
+    config.validate_config()
+
+    # LLM
+    base_llm = ChatGroq(
+        model=config.MODEL_NAME,
+        groq_api_key=config.GROQ_API_KEY,
+        temperature=0,
+    )
+    llm_with_tools = base_llm.bind_tools(ALL_TOOLS)
+
+    # Shared VFS container (Milestone 2)
+    vfs_container: dict = {}
+    bind_vfs(vfs_container)
+
+    # Log sub-agents on startup (Milestone 3)
+    from sub_agents.registry import sub_agents, describe_agents
+    logger.info(f"Sub-agents registered: {list(sub_agents.keys())}")
+    logger.info(describe_agents())
+
+    # Tool map for tools_node
+    tool_map = {t.name: t for t in ALL_TOOLS}
+
+    # Build all nodes
+    planner_node       = make_planner_node(llm_with_tools)
+    executor_node      = make_executor_node(llm_with_tools)
+    tools_node         = make_tools_node(tool_map, vfs_container)
+    task_complete_node = make_task_complete_node(base_llm)
+    synthesiser_node   = make_synthesiser_node(base_llm)
+
+    # Wire the graph
+    graph = StateGraph(AgentState)
+    graph.add_node("planner",       planner_node)
+    graph.add_node("tools",         tools_node)
+    graph.add_node("executor",      executor_node)
+    graph.add_node("task_complete", task_complete_node)
+    graph.add_node("synthesiser",   synthesiser_node)
+
+    graph.add_edge(START, "planner")
+
+    graph.add_conditional_edges("planner", route_after_planner,
+        {"tools": "tools", "synthesiser": "synthesiser"})
+
+    graph.add_conditional_edges("tools", route_after_tools,
+        {"executor": "executor", "synthesiser": "synthesiser",
+         "task_complete": "task_complete"})
+
+    graph.add_conditional_edges("executor", route_after_executor,
+        {"tools": "tools", "task_complete": "task_complete",
+         "synthesiser": "synthesiser"})
+
+    graph.add_conditional_edges("task_complete", route_after_task_complete,
+        {"executor": "executor", "synthesiser": "synthesiser"})
+
+    graph.add_edge("synthesiser", END)
+
+    compiled = graph.compile()
+    logger.info("Graph compiled — Milestone 3 ready")
+    return compiled
