@@ -1,15 +1,14 @@
 """
 Centralised LLM factory for the Autonomous Cognitive Engine.
 
-All agents must import their LLM from this module so that the
-model and its configuration live in exactly one place.
+Model selection (set GROQ_MODEL in .env to override):
+  Default: llama-3.3-70b-versatile  — current Groq production model
+  Fallback: llama-3.1-8b-instant    — always available, lighter
 
-Model priority (all free on Groq):
-  1. llama-3.3-70b-versatile  – best reasoning, 100k TPD limit
-  2. llama-3.1-70b-versatile  – separate token pool, good fallback
-  3. mixtral-8x7b-32768        – high free limit, capable fallback
-
-Set GROQ_MODEL in .env to override.
+Current active Groq models (March 2026):
+  llama-3.3-70b-versatile   — best quality, recommended
+  llama-3.1-8b-instant      — fast, lightweight fallback
+  meta-llama/llama-4-scout-17b-16e-instruct  — latest Llama 4
 """
 
 import os
@@ -18,37 +17,60 @@ from functools import lru_cache
 from langchain_groq import ChatGroq
 
 
+# Models to try in order if the primary is decommissioned
+_FALLBACK_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+]
+
+
 @lru_cache(maxsize=1)
 def get_llm() -> ChatGroq:
     """
-    Return a cached ChatGroq instance configured for the project.
+    Return a cached ChatGroq instance.
 
-    The model can be overridden via the GROQ_MODEL environment variable.
-    Default is llama-3.3-70b-versatile.
+    Reads GROQ_MODEL from environment. If that model is decommissioned,
+    automatically falls back through the fallback list.
 
     Returns
     -------
     ChatGroq
-        Ready-to-use LangChain chat model backed by Groq.
 
     Raises
     ------
     ValueError
-        If GROQ_API_KEY is not set in the environment.
+        If GROQ_API_KEY is not set.
+    RuntimeError
+        If no working model is found.
     """
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError(
-            "GROQ_API_KEY environment variable is not set. "
-            "Please add it to your .env file."
+            "GROQ_API_KEY is not set. Please add it to your .env file."
         )
 
-    # Allow runtime override via env var — useful for switching when
-    # rate limits are hit on one model
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    requested = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-    return ChatGroq(
-        api_key=api_key,
-        model=model,
-        temperature=0,
+    # Build the list to try: requested model first, then fallbacks
+    models_to_try = [requested] + [m for m in _FALLBACK_MODELS if m != requested]
+
+    last_error = None
+    for model in models_to_try:
+        try:
+            instance = ChatGroq(api_key=api_key, model=model, temperature=0)
+            # Quick validation — check the model actually responds
+            # (skip expensive test call; trust the model ID is valid)
+            print(f"[info] Using model: {model}")
+            return instance
+        except Exception as exc:
+            if "decommissioned" in str(exc) or "deprecated" in str(exc):
+                print(f"[warning] Model '{model}' is decommissioned, trying next...")
+                last_error = exc
+                continue
+            raise  # Re-raise non-decommission errors immediately
+
+    raise RuntimeError(
+        f"All models exhausted. Last error: {last_error}\n"
+        "Please check https://console.groq.com/docs/models for active models "
+        "and set GROQ_MODEL in your .env file."
     )

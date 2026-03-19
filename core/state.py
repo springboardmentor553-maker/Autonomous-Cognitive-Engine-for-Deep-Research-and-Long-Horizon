@@ -2,6 +2,10 @@
 LangGraph AgentState definition for the Autonomous Cognitive Engine.
 
 Defines the shared state schema passed through the graph at every node.
+
+Milestone 3 adds:
+  delegation_history  – log of every sub-agent delegation made
+  sub_agent_results   – keyed results returned by sub-agents
 """
 
 from typing import Annotated, Any
@@ -14,6 +18,14 @@ class TodoItem(TypedDict):
 
     task: str
     status: str  # "pending" | "in_progress" | "done"
+
+
+class DelegationRecord(TypedDict):
+    """A record of a single sub-agent delegation."""
+
+    agent_name: str   # which sub-agent was called
+    task: str         # what task was delegated
+    result: str       # what the sub-agent returned
 
 
 class AgentState(TypedDict):
@@ -34,6 +46,10 @@ class AgentState(TypedDict):
         Index pointer into `todos` indicating which task is active.
     final_output : str
         The synthesised answer returned to the user at the end.
+    delegation_history : list[DelegationRecord]
+        Ordered log of every delegate_task call made during this run.
+    sub_agent_results : dict[str, str]
+        Named results from sub-agents; keyed by "<agent_name>:<task_snippet>".
     """
 
     messages: Annotated[list, add_messages]
@@ -42,6 +58,8 @@ class AgentState(TypedDict):
     intermediate_results: list[str]
     current_task: int
     final_output: str
+    delegation_history: list[DelegationRecord]
+    sub_agent_results: dict[str, str]
 
 
 def initial_state() -> AgentState:
@@ -53,4 +71,6 @@ def initial_state() -> AgentState:
         intermediate_results=[],
         current_task=0,
         final_output="",
+        delegation_history=[],
+        sub_agent_results={},
     )
