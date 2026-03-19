@@ -1,0 +1,5 @@
+state = {
+    "todos": [],
+    "files": {},
+    "trace": []
+}
