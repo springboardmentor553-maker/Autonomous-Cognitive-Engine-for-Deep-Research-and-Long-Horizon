@@ -22,3 +22,11 @@ generated_todos.json
 # uv
 .python-version
 uv.lock
+
+.env
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+milestone2_output.json
+milestone2_eval_results.json

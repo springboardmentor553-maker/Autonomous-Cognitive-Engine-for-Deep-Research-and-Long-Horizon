@@ -1,5 +1,8 @@
+# Deep Cognitive Task Framework — Milestones 1-3
+# All milestones share the same dependency set.
 langgraph>=0.2.0
 langchain>=0.3.0
 langchain-core>=0.3.0
 langchain-google-genai>=2.0.0
 python-dotenv>=1.0.0
+typing-extensions>=4.0.0

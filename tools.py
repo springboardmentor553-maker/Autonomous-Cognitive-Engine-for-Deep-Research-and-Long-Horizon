@@ -1,38 +1,36 @@
 """
-tools.py - Tool Definitions for Deep Cognitive Task Framework
-Milestone 1: Planning Tool (write_todos)
+tools.py - Combined Tool Registry for Deep Cognitive Task Framework
+Milestone 3: Planning tools (M1) + Virtual File System tools (M2) + Delegation tools (M3)
 """
 
 import json
 import uuid
 from langchain_core.tools import tool
 from state import TodoItem
+from filesystem_tools import FILESYSTEM_TOOLS
+from delegation_tool import DELEGATION_TOOLS
 
+# ─────────────────────────────────────────────
+# Planning Tools (from Milestone 1)
+# ─────────────────────────────────────────────
 
 @tool
 def write_todos(tasks: list[str]) -> str:
     """
     Decompose a complex goal into a structured list of sub-tasks (TODOs).
-    
-    Use this tool FIRST when you receive a complex request.
-    Each task should be a clear, actionable step toward completing the overall goal.
-    
+
+    ALWAYS call this first when you receive a new complex request.
+    Each task should be a clear, actionable step toward the overall goal.
+
     Args:
-        tasks: A list of task descriptions (strings). Each should be a distinct,
-               actionable sub-task required to complete the overall goal.
-    
+        tasks: List of EXACTLY 5 task descriptions. Each must start with one of:
+               RESEARCH / ANALYZE / SYNTHESIZE / DRAFT / REVIEW
+
     Returns:
-        A JSON string representing the created TODO list with IDs and statuses.
-    
-    Example:
-        tasks = [
-            "Search for recent papers on topic X",
-            "Summarize the key findings",
-            "Write the final report"
-        ]
+        JSON with the created TODO list including IDs and statuses.
     """
     todos = []
-    for i, task_desc in enumerate(tasks):
+    for task_desc in tasks:
         todo: TodoItem = {
             "id": str(uuid.uuid4())[:8],
             "task": task_desc,
@@ -41,30 +39,24 @@ def write_todos(tasks: list[str]) -> str:
         }
         todos.append(todo)
 
-    result = {
+    return json.dumps({
         "success": True,
         "message": f"Created {len(todos)} TODO items successfully.",
         "todos": todos
-    }
-    return json.dumps(result, indent=2)
+    }, indent=2)
 
 
 @tool
 def get_todos(placeholder: str = "") -> str:
     """
     Retrieve the current list of TODOs and their statuses.
-    Use this to check what tasks remain to be done.
-    
-    Args:
-        placeholder: Not used. Pass empty string or any value.
-    
+    Use this to check which tasks remain to be done.
+
     Returns:
-        JSON string of the current TODO list (read from state via the agent).
+        Instruction to check state.todos (managed by the orchestrator).
     """
-    # This tool is a signal — actual TODO state is managed in AgentState.
-    # The agent's system prompt instructs it to always check state.todos.
     return json.dumps({
-        "info": "TODOs are stored in agent state. Check the 'todos' field in current state."
+        "info": "TODOs are stored in agent state under the 'todos' field."
     })
 
 
@@ -72,12 +64,12 @@ def get_todos(placeholder: str = "") -> str:
 def mark_todo_complete(todo_id: str) -> str:
     """
     Mark a specific TODO item as completed by its ID.
-    
+
     Args:
-        todo_id: The ID of the TODO item to mark as completed.
-    
+        todo_id: The 8-character ID of the TODO item to mark as completed.
+
     Returns:
-        Confirmation message with the updated TODO item.
+        JSON confirmation of the status update.
     """
     return json.dumps({
         "success": True,
@@ -87,5 +79,10 @@ def mark_todo_complete(todo_id: str) -> str:
     })
 
 
-# Export all tools for the agent
+# ─────────────────────────────────────────────
+# Combined Tool Registry
+# ─────────────────────────────────────────────
+
 PLANNING_TOOLS = [write_todos, get_todos, mark_todo_complete]
+# M1 + M2 + M3 — all tools available to the supervisor
+ALL_TOOLS = PLANNING_TOOLS + FILESYSTEM_TOOLS + DELEGATION_TOOLS
