@@ -11,7 +11,7 @@ def write_todos_tool(task: str):
     llm = ChatGroq(
         model="llama-3.1-8b-instant", 
         temperature=0,
-        groq_api_key="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"
+        groq_api_key=""
     )
     
     try:
