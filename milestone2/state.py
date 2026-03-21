@@ -1,0 +1,4 @@
+state = {
+    "memory": {},
+    "trace": []
+}
