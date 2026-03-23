@@ -4,16 +4,18 @@ import json
 import ast
 from typing import List, Dict
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
 
 # Set project name for Milestone 2
-os.environ["LANGCHAIN_PROJECT"] = "Milestone2-ContextOffloading"
+os.environ["LANGCHAIN_PROJECT"] = "Milestone3 -> Sub-agents"
 
 from langchain_core.tools import Tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_google_genai import ChatGoogleGenerativeAI
+from tools.execution.delegation_tool import task_delegate
 
 # Import Existing Planning Tool
 from tools.planning.write_todos import write_todos
@@ -24,25 +26,26 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
 # Registering all tools
 # Note: creating a list of tools including your Milestone 1 tool
-tools = [write_todos, write_file, read_file, ls, edit_file]
+tools = [write_todos, write_file, read_file, ls, edit_file, task_delegate]
 
 # ENHANCED SYSTEM PROMPT (Based on Mentor Notes)
-SYSTEM_PROMPT = """You are an Intelligent Research Agent.
+SYSTEM_PROMPT = """You are a Lead Research Supervisor. 
 
-PHASE 1: PLANNING
-- You MUST call 'write_todos' FIRST for any complex task.
+You manage a team of specialists: researcher, summarizer, comparator, and refiner.
 
-PHASE 2: CONTEXT OFFLOADING
-- Do NOT store raw data in your memory. Summarize and use 'write_file'.
-- Use 'ls' to see what files you have.
-- Use 'read_file' SELECTIVELY. Only load the specific files needed for your current thought.
-- Use 'edit_file' to refine existing notes.
+DELEGATION PROTOCOL:
+1. **Initial Planning**: Always start with 'write_todos'.
+2. **Autonomous Workflow**:
+   - For raw data gathering, use the 'researcher'.
+   - For cleaning up dense research, use the 'summarizer'.
+   - For comparing multiple entities, use the 'comparator'.
+   - ALWAYS use the 'refiner' as the final step to produce the final answer.
+3. **Integration & Storage**: 
+   - Every time a sub-agent returns a result, you MUST call 'write_file' to save it to the Virtual File System.
+   - Use 'ls' to maintain awareness of the files your team has created.
 
-Success Criteria:
-- No context window explosion.
-- Meaningful file names.
-- Minimal confirmation responses after writing.
-"""
+Your goal is to coordinate these experts to solve complex, long-horizon research tasks while maintaining a clean context window."""
+
 
 def create_planning_agent():
     memory = MemorySaver()
@@ -64,6 +67,7 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
     
     # We use stream to capture the tool calls properly
     for event in agent.stream(input_message, config, stream_mode="values"):
+        time.sleep(2)
         final_state = event
         if "messages" in event:
             for msg in event["messages"]:
