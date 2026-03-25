@@ -415,6 +415,3 @@ This project is part of the Infosys Springboard Internship Program.
 5. Push and create a Pull Request
 
 ---
-
-> "Do not trust the LLM to remember, plan, or manage tasks.
-> Externalize everything into state, memory, and structured workflows."
