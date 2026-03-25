@@ -250,6 +250,10 @@ def _save_results(final_state: dict, task: str):
         "files": final_state.get("files", {}),
         "trace_log": final_state.get("trace_log", []),
         "final_output": final_state.get("final_output", ""),
+        "quality_score": final_state.get("quality_score"),
+        "quality_target": final_state.get("quality_target"),
+        "quality_passed": final_state.get("quality_passed"),
+        "quality_report": final_state.get("quality_report", {}),
         "architecture_metrics": {
             "total_files": len(final_state.get("files", {})),
             "total_tool_calls": len(final_state.get("trace_log", [])),

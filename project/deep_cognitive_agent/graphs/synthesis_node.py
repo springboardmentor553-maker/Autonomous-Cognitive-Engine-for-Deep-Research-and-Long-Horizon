@@ -11,12 +11,121 @@ Architecture:  START → plan → execute → **synthesize** → END
 
 import re
 import time
+import os
+import json
 
 from langchain_core.messages import AIMessage
 
 from tools.vfs.read_file import read_file
 from tools.vfs.ls import ls
-from utils.helpers import parse_retry_after, is_rate_limit_error, is_server_overload_error
+from utils.helpers import (
+    parse_retry_after,
+    is_rate_limit_error,
+    is_server_overload_error,
+    invoke_with_retry,
+    sanitize_llm_output,
+)
+
+
+def _extract_json_object(text: str) -> dict:
+    """Best-effort parse of a JSON object from model output."""
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        return {}
+
+    try:
+        return json.loads(match.group(0))
+    except Exception:
+        return {}
+
+
+def _evaluate_quality(llm, task: str, candidate: str) -> dict:
+    """LLM-as-judge quality evaluator returning normalized scoring JSON."""
+    eval_prompt = (
+        "You are a strict quality evaluator. Score ONLY the given final report.\n"
+        "Return valid JSON only (no prose, no markdown) with this exact schema:\n"
+        "{\n"
+        "  \"score\": int,\n"
+        "  \"breakdown\": {\"accuracy\": int, \"coverage\": int, \"structure\": int, \"actionability\": int, \"coherence\": int},\n"
+        "  \"must_fix\": [string],\n"
+        "  \"strengths\": [string]\n"
+        "}\n"
+        "Scoring rules:\n"
+        "- Each breakdown field is 0-100\n"
+        "- score is overall 0-100\n"
+        "- Be strict and evidence-based\n"
+        "- If report contains <think> tags, reduce score heavily\n\n"
+        f"Original user task:\n{task}\n\n"
+        f"Candidate report:\n{candidate}"
+    )
+
+    raw = invoke_with_retry(llm, eval_prompt)
+    parsed = _extract_json_object(raw)
+
+    score = parsed.get("score", 0)
+    try:
+        score = int(score)
+    except Exception:
+        score = 0
+
+    breakdown = parsed.get("breakdown", {}) if isinstance(parsed.get("breakdown", {}), dict) else {}
+    must_fix = parsed.get("must_fix", []) if isinstance(parsed.get("must_fix", []), list) else []
+    strengths = parsed.get("strengths", []) if isinstance(parsed.get("strengths", []), list) else []
+
+    return {
+        "score": max(0, min(100, score)),
+        "breakdown": breakdown,
+        "must_fix": must_fix,
+        "strengths": strengths,
+    }
+
+
+def _refine_with_feedback(llm, task: str, current: str, quality_report: dict) -> str:
+    """Refine report based on evaluator feedback while preserving structure."""
+    must_fix = quality_report.get("must_fix", [])
+    breakdown = quality_report.get("breakdown", {})
+
+    refine_prompt = (
+        "Rewrite and improve the report below to maximize quality.\n"
+        "Hard requirements:\n"
+        "1) Keep this exact section order with clear headings: Overview, Key Findings, Analysis, Recommendations, Conclusion\n"
+        "2) Improve factual precision, coverage, and actionable recommendations\n"
+        "3) Remove filler and redundancy\n"
+        "4) DO NOT include any <think> tags or hidden reasoning\n"
+        "5) Return only the improved report text\n\n"
+        f"Original task:\n{task}\n\n"
+        f"Quality breakdown:\n{json.dumps(breakdown, ensure_ascii=False)}\n"
+        f"Must-fix issues:\n{json.dumps(must_fix, ensure_ascii=False)}\n\n"
+        f"Current report:\n{current}"
+    )
+    refined = invoke_with_retry(llm, refine_prompt)
+    return sanitize_llm_output(refined)
+
+
+def _rewrite_from_sources(llm, task: str, sources: str, quality_report: dict) -> str:
+    """Regenerate a high-quality final report directly from sources and feedback."""
+    must_fix = quality_report.get("must_fix", [])
+    rewrite_prompt = (
+        "Generate a high-quality final report from the source material.\n"
+        "Hard requirements:\n"
+        "1) Section order must be: Overview, Key Findings, Analysis, Recommendations, Conclusion\n"
+        "2) Be comprehensive but concise, with concrete and actionable recommendations\n"
+        "3) Ensure logical flow and remove redundancy\n"
+        "4) Do not include hidden reasoning tags like <think>\n"
+        "5) Return only the final report\n\n"
+        f"Task:\n{task}\n\n"
+        f"Priority fixes from prior evaluation:\n{json.dumps(must_fix, ensure_ascii=False)}\n\n"
+        f"Source material:\n{sources}"
+    )
+    rewritten = invoke_with_retry(llm, rewrite_prompt)
+    return sanitize_llm_output(rewritten)
 
 
 # ── Node Function ────────────────────────────────────────────────────
@@ -47,6 +156,10 @@ def synthesize_node(state: dict, llm) -> dict:
     files = dict(state.get("files", {}))
     vfs_state = {"files": files}
     trace_log = list(state.get("trace_log", []))
+    user_task = ""
+    if state.get("messages"):
+        first_msg = state["messages"][0]
+        user_task = getattr(first_msg, "content", "") if first_msg else ""
 
     # ── Step 1: List files and classify them ──
     file_list = ls(vfs_state)
@@ -96,7 +209,6 @@ def synthesize_node(state: dict, llm) -> dict:
             "purpose": purpose,
             "step": "synthesis",
         })
-        preview = content[:100].replace("\n", " ")
         print(f"    → read_file('{fname}'): {len(content)} chars")
         contents.append(f"--- {fname} ---\n{content}")
 
@@ -130,7 +242,7 @@ def synthesize_node(state: dict, llm) -> dict:
     for attempt in range(max_retries):
         try:
             response = llm.invoke(prompt)
-            final_summary = response.content
+            final_summary = sanitize_llm_output(response.content)
             break
         except Exception as e:
             err_str = str(e)
@@ -146,6 +258,73 @@ def synthesize_node(state: dict, llm) -> dict:
                     time.sleep(wait)
                     continue
             raise
+
+    # ── Step 4: Quality-gated refinement loop (target defaults to 95) ──
+    quality_target = int(os.getenv("QUALITY_TARGET_SCORE", "96"))
+    max_refinements = int(os.getenv("QUALITY_MAX_REFINEMENTS", "5"))
+
+    best_summary = final_summary
+    best_quality = _evaluate_quality(llm, user_task, final_summary)
+
+    print(f"[Synthesize Node] Initial quality score: {best_quality['score']}/100")
+
+    current_summary = final_summary
+    current_quality = best_quality
+    for round_idx in range(1, max_refinements + 1):
+        if current_quality["score"] >= quality_target:
+            break
+
+        print(
+            f"[Synthesize Node] Refinement round {round_idx}/{max_refinements} "
+            f"(score {current_quality['score']} < target {quality_target})"
+        )
+        # Strategy A: improve current best draft.
+        candidate_refine = _refine_with_feedback(
+            llm,
+            user_task,
+            best_summary,
+            current_quality,
+        )
+        refine_quality = _evaluate_quality(
+            llm,
+            user_task,
+            candidate_refine,
+        )
+
+        # Strategy B: full rewrite from source files + evaluator feedback.
+        candidate_rewrite = _rewrite_from_sources(
+            llm,
+            user_task,
+            combined_text,
+            current_quality,
+        )
+        rewrite_quality = _evaluate_quality(
+            llm,
+            user_task,
+            candidate_rewrite,
+        )
+
+        # Keep the best candidate from this round.
+        if rewrite_quality["score"] >= refine_quality["score"]:
+            current_summary, current_quality = candidate_rewrite, rewrite_quality
+        else:
+            current_summary, current_quality = candidate_refine, refine_quality
+
+        if current_quality["score"] > best_quality["score"]:
+            best_quality = current_quality
+            best_summary = current_summary
+
+    final_summary = best_summary
+
+    trace_log.append({
+        "action": "quality_evaluate",
+        "file": None,
+        "purpose": (
+            f"Final output quality scored {best_quality['score']}/100 "
+            f"(target: {quality_target}, max_refinements: {max_refinements})"
+        ),
+        "step": "synthesis",
+    })
 
     # ── Mark any remaining todos as done ──
     todos = list(state.get("todos", []))
@@ -165,6 +344,10 @@ def synthesize_node(state: dict, llm) -> dict:
 
     return {
         "final_output": final_summary,
+        "quality_score": best_quality["score"],
+        "quality_target": quality_target,
+        "quality_passed": best_quality["score"] >= quality_target,
+        "quality_report": best_quality,
         "todos": todos,
         "trace_log": trace_log,
         "messages": [
@@ -172,7 +355,9 @@ def synthesize_node(state: dict, llm) -> dict:
                 content=(
                     f"Final structured summary created from "
                     f"{len(files_to_read)} key files "
-                    f"(skipped {len(summary_files)} raw summaries)."
+                    f"(skipped {len(summary_files)} raw summaries). "
+                    f"Quality score: {best_quality['score']}/100 "
+                    f"(target: {quality_target})."
                 )
             )
         ],

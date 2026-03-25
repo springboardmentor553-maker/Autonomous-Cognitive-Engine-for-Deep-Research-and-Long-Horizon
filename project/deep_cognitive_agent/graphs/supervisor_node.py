@@ -21,22 +21,84 @@ from tools.planning.write_todos import write_todos
 from utils.helpers import parse_retry_after, is_rate_limit_error
 
 
-# ── Step Classification ──────────────────────────────────────────────
+# ── Simple Task Detection ────────────────────────────────────────────
+
+def _is_simple_task(task: str) -> bool:
+    """
+    Detect if a task is trivial/simple enough to handle in one step.
+
+    Simple tasks include:
+      - Text formatting (uppercase, lowercase, capitalize)
+      - Simple calculations (count, sum)
+      - Simple combining (merge, join, concatenate)
+      - Trivial operations (format, parse)
+
+    Complex tasks that need planning:
+      - Research / analysis
+      - Comparisons across multiple sources
+      - Building frameworks / models
+      - Multi-step workflows
+
+    Returns:
+        True if task is simple (1-step), False if it needs complex planning
+    """
+    task_lower = task.lower()
+
+    # Simple/trivial keywords
+    simple_keywords = [
+        "uppercase", "lowercase", "capitalize", "format",
+        "combine", "merge", "join", "concatenate",
+        "count", "sum", "calculate", "compute",
+        "convert text", "fix spacing", "add spaces",
+        "remove spaces", "fix punctuation",
+    ]
+
+    is_simple = any(kw in task_lower for kw in simple_keywords)
+
+    # Complex keywords that override simple detection
+    complex_keywords = [
+        "research", "analyze", "compare", "investigate",
+        "evaluate", "assess", "study", "explore",
+        "propose", "unify", "framework", "model",
+        "across", "multiple", "different"
+    ]
+
+    has_complexity = any(kw in task_lower for kw in complex_keywords)
+
+    return is_simple and not has_complexity
+
+
+def _create_simple_plan(task: str) -> dict:
+    """
+    Create a minimal single-step plan for simple tasks.
+
+    Returns:
+        dict with "todos" containing one simple step
+    """
+    return {
+        "todos": [
+            {
+                "task": task,
+                "status": "pending"
+            }
+        ]
+    }
+
 
 def _classify_step(task_text: str) -> str:
     """Classify a step by its action type using keyword analysis."""
     text_lower = task_text.lower()
 
-    # Check refine/improve keywords first (most specific)
+    # Check refine/improve keywords (most specific)
     refine_kw = ["refine", "improve", "enhance", "update", "optimize",
                  "revise", "strengthen", "polish", "finalize"]
     if any(kw in text_lower for kw in refine_kw):
         return "refine"
 
     # Check unify/propose keywords
-    unify_kw = ["propose", "unify", "unified", "combine", "develop a model",
+    unify_kw = ["propose", "unify", "unified", "develop a model",
                 "create a model", "create a framework", "design a framework",
-                "integrate", "merge", "consolidate", "formulate",
+                "integrate", "consolidate", "formulate",
                 "develop a framework", "build a model"]
     if any(kw in text_lower for kw in unify_kw):
         return "unify"
@@ -85,6 +147,8 @@ def _enrich_todos(raw_todos: list) -> list:
     - Compare step → reads all research files
     - Unify step → reads comparison file
     - Refine step → reads and edits unified model file
+
+    Over-delegation prevention happens at execution time in _should_delegate().
     """
     enriched = []
     research_files = []
@@ -172,7 +236,8 @@ def plan_node(state: dict, llm) -> dict:
 
     trace_log = list(state.get("trace_log", []))
 
-    # Call write_todos with retry logic for rate limits
+    # Always use LLM-based planning to ensure multi-step workflow
+    # Over-delegation prevention happens in execution layer (_should_delegate)
     max_retries = 3
     result = None
     for attempt in range(max_retries):

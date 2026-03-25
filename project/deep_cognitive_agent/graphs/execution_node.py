@@ -25,7 +25,12 @@ from langchain_core.messages import AIMessage
 from tools.vfs.write_file import write_file
 from tools.vfs.read_file import read_file
 from tools.vfs.edit_file import edit_file
-from utils.helpers import parse_retry_after, is_rate_limit_error, is_server_overload_error
+from utils.helpers import (
+    parse_retry_after,
+    is_rate_limit_error,
+    is_server_overload_error,
+    sanitize_llm_output,
+)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -35,7 +40,7 @@ def _invoke_llm_with_retry(llm, prompt: str, max_retries: int = 3) -> str:
     for attempt in range(max_retries):
         try:
             response = llm.invoke(prompt)
-            return response.content
+            return sanitize_llm_output(response.content)
         except Exception as e:
             err_str = str(e)
             if attempt < max_retries - 1:

@@ -16,8 +16,14 @@ This test verifies multi-agent architecture maturity:
 
 import os
 import sys
+import io
 import json
 from datetime import datetime
+
+# Fix Unicode output on Windows (cp1252 console can't print arrows/emojis)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

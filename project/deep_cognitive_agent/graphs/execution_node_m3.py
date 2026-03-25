@@ -5,10 +5,24 @@ Processes each enriched TODO step using delegation reasoning to decide
 whether the supervisor should handle a task itself or delegate to a
 specialized sub-agent.
 
+CORE PRINCIPLES FOR INTELLIGENT DELEGATION:
+  ⚖️ When NOT to Delegate (Over-Delegation Prevention):
+    - Simple tasks (e.g., combining 2 sentences)
+    - Trivial formatting changes (e.g., capitalization, spacing)
+    - Simple calculations (e.g., count items, sum)
+    - Tasks where delegating costs more than solving directly
+    → Supervisor handles these to avoid unnecessary overhead
+
+  🔗 When Results MUST Be Used (Most Important Rule):
+    - Every delegation MUST result in used output
+    - Supervisor MUST integrate results into workflow
+    - Results stored in VFS or used in next step
+    - Ignoring results = broken workflow ❌
+
 Three key decisions per step (Supervisor Architecture):
   1. Decide the next task (from enriched TODO list)
   2. Decide whether to perform it or delegate (_should_delegate)
-  3. Integrate the result (_integrate_result)
+  3. Integrate the result (_integrate_result) — ALWAYS use result
 
 Step-type → Sub-agent mapping (when delegating):
   - research  → "researcher"  agent → write_file(meaningful_name.txt)
@@ -17,10 +31,11 @@ Step-type → Sub-agent mapping (when delegating):
   - refine    → "refiner"     agent → read target → edit_file
 
 Key Milestone 3 principles:
-  ✔ Delegation reasoning — supervisor explicitly decides delegate vs self-handle
+  ✔ Intelligent delegation — supervisor explicitly decides delegate vs self-handle
   ✔ Over-delegation prevention — trivial tasks handled by supervisor directly
   ✔ Clear structured instructions — subagents receive explicit requirements
-  ✔ Result integration — supervisor validates subagent results before storing
+  ✔ Result integration ALWAYS — supervisor validates subagent results before storing
+  ✔ Results NEVER ignored — every delegated result flows into workflow
   ✔ State management — only supervisor modifies VFS, subagents return results
   ✔ Selective retrieval preserved from Milestone 2
   ✔ Trace logging records delegation reasoning and agent attribution
@@ -30,6 +45,7 @@ Architecture:
   START → supervisor → **execute_with_delegation** → synthesize → END
 """
 
+
 import time
 
 from langchain_core.messages import AIMessage
@@ -38,7 +54,12 @@ from tools.vfs.write_file import write_file
 from tools.vfs.read_file import read_file
 from tools.vfs.edit_file import edit_file
 from tools.delegation.task import delegate_task
-from utils.helpers import parse_retry_after, is_rate_limit_error, is_server_overload_error
+from utils.helpers import (
+    parse_retry_after,
+    is_rate_limit_error,
+    is_server_overload_error,
+    sanitize_llm_output,
+)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -67,16 +88,23 @@ def _should_delegate(todo: dict, step_type: str) -> dict:
     Delegation reasoning: decide whether the supervisor should handle
     a task itself or delegate it to a specialist sub-agent.
 
-    The supervisor delegates when:
-      - The task requires a specialized skill (research, comparison, etc.)
-      - The task is repetitive and can be standardized
-      - The task requires a focused prompt
-      - The task can be isolated from the main reasoning flow
+    KEY PRINCIPLE: Delegation is only valid if the result is USED.
+    Delegating adds overhead and complexity, so only delegate when:
+      - The task requires specialized expertise
+      - The task is complex enough to justify agent communication
+      - The supervisor cannot handle it efficiently itself
 
-    The supervisor handles tasks itself when:
-      - The task is simple enough (e.g., combining two short sentences)
-      - The task is trivial reasoning that doesn't need a specialist
-      - Delegating would introduce unnecessary communication overhead
+    The supervisor delegates when:
+      - The task requires deep research or structured comparison
+      - The task needs specialized domain knowledge
+      - The task output will be used in subsequent steps
+
+    The supervisor handles tasks itself when (OVER-DELEGATION PREVENTION):
+      ⚖️  Task is very short (< 50 chars, trivial text operations)
+      ⚖️  Task is trivial reasoning (list, name, count, define briefly)
+      ⚖️  Task is simple formatting (add/remove text, simple calculations)
+      ⚖️  Delegating would add more complexity than the original task
+      ⚖️  Task involves only combining existing results with no new analysis
 
     Returns:
         dict with keys:
@@ -86,6 +114,7 @@ def _should_delegate(todo: dict, step_type: str) -> dict:
     """
     task_text = todo.get("task", "").lower()
     task_length = len(task_text)
+    step_type = todo.get("step_type", step_type)
 
     # Map step_type → preferred sub-agent
     agent_map = {
@@ -95,41 +124,81 @@ def _should_delegate(todo: dict, step_type: str) -> dict:
         "refine": "refiner",
     }
 
-    # ── Over-delegation prevention ──
-    # Simple tasks that the supervisor can handle itself:
-    # 1. Very short tasks (< 30 chars) that are trivial reasoning
-    trivial_keywords = ["list", "name", "count", "define briefly",
-                        "state the", "mention"]
-    is_trivial = (task_length < 30
-                  and any(kw in task_text for kw in trivial_keywords))
+    # ── OVER-DELEGATION PREVENTION ──
+    # Category 1: Trivial/Very Short Tasks (< 50 chars)
+    trivial_short_keywords = [
+        "list", "name", "count", "define briefly", "state the", "mention",
+        "combine", "merge", "join", "concatenate", "uppercase", "lowercase",
+        "capitalize", "format", "convert text"
+    ]
+    is_trivially_short = (task_length < 50
+                          and any(kw in task_text for kw in trivial_short_keywords))
 
-    if is_trivial:
+    if is_trivially_short:
         return {
             "delegate": False,
             "agent": None,
-            "reason": (f"Task is simple enough for supervisor to handle "
-                       f"directly — avoids over-delegation overhead"),
+            "reason": (f"Task is too simple for specialist delegation — "
+                       f"supervisor handles directly to avoid unnecessary overhead"),
         }
 
-    # ── Delegation reasoning for specialized tasks ──
+    # Category 2: Simple Formatting Tasks (no new analysis needed)
+    formatting_keywords = [
+        "format", "reformat", "add formatting", "remove formatting",
+        "capitalize", "lowercase", "fix spelling", "fix grammar",
+        "punctuation", "add spaces", "remove spaces",
+        "calculate", "compute simple", "count items", "sum"
+    ]
+    is_simple_formatting = (task_length < 80
+                            and any(kw in task_text for kw in formatting_keywords))
+
+    if is_simple_formatting:
+        return {
+            "delegate": False,
+            "agent": None,
+            "reason": (f"Task is simple formatting/computation — "
+                       f"supervisor handles directly without delegation overhead"),
+        }
+
+    # Category 3: Simple Combining (merging existing results)
+    combining_keywords = [
+        "combine sentences", "combine the", "merge ", "join ",
+        "put together", "assemble", "aggregate"
+    ]
+    has_combining_pattern = any(kw in task_text for kw in combining_keywords)
+    has_new_analysis = any(w in task_text for w in ["analyze", "compare", "evaluate", "assess", "research"])
+
+    is_simple_combining = (has_combining_pattern and not has_new_analysis
+                          and task_length < 100)
+
+    if is_simple_combining:
+        return {
+            "delegate": False,
+            "agent": None,
+            "reason": (f"Task is simple combination of existing results — "
+                       f"supervisor combines without new analysis, avoiding unnecessary delegation"),
+        }
+
+    # ── DELEGATION REASONING FOR SPECIALIZED/COMPLEX TASKS ──
+    # If we haven't returned False yet, this task is complex/specialized enough to delegate
     agent_name = agent_map.get(step_type, "researcher")
 
     reasoning_map = {
         "research": (
             "Task requires deep research with specific facts and data — "
-            "researcher agent has a focused prompt for 150+ word analysis"
+            "researcher agent has focused expertise for comprehensive 150+ word analysis"
         ),
         "compare": (
             "Task requires structured comparison across multiple sources — "
-            "comparator agent specializes in identifying differences and similarities"
+            "comparator agent specializes in identifying differences, similarities, and trade-offs"
         ),
         "unify": (
             "Task requires proposing a unified framework from analysis — "
-            "unifier agent has expertise in integration and model building"
+            "unifier agent has expertise in integration and coherent model building"
         ),
         "refine": (
             "Task requires refining existing content with additional depth — "
-            "refiner agent specializes in enhancement and practical considerations"
+            "refiner agent specializes in enhancement and practical implementation insights"
         ),
     }
 
@@ -137,7 +206,7 @@ def _should_delegate(todo: dict, step_type: str) -> dict:
         "delegate": True,
         "agent": agent_name,
         "reason": reasoning_map.get(step_type,
-                                     f"Specialized {step_type} task → delegate to {agent_name}"),
+                                     f"Task requires specialized {step_type} expertise → delegate to {agent_name}"),
     }
 
 
@@ -165,7 +234,7 @@ def _supervisor_handle(todo, step_num, vfs_state, trace_log, llm):
         f"Provide a direct, clear response:"
     )
     response = llm.invoke(prompt)
-    content = response.content
+    content = sanitize_llm_output(response.content)
 
     write_file(vfs_state, output_file, content)
     _log_trace(trace_log, "write_file", output_file,
@@ -182,17 +251,40 @@ def _integrate_result(content: str, agent_name: str, task: str,
     """
     Supervisor integrates the result returned by a sub-agent.
 
-    After a sub-agent finishes:
-      1. Supervisor receives the result
-      2. Validates it (not empty, reasonable length)
-      3. Processes it for the next step
+    🔗 MOST IMPORTANT RULE:
+    Delegation is ONLY valid if the result is USED.
+    After receiving a result, the supervisor MUST:
+      ✅ Use it in final output
+      ✅ Store it for later use (memory via VFS)
+      ✅ Combine it with other results
+    Ignoring the result = broken workflow ❌
 
-    This ensures the supervisor always controls state management,
-    and sub-agents only return results without modifying global state.
+    Integration steps:
+      1. Supervisor receives the result from the sub-agent
+      2. Validates it for quality (not empty, reasonable length)
+      3. Flags warnings if result is insufficient
+      4. Prepares result for storage/subsequent steps
+      5. Result is ALWAYS used — stored in VFS and referenced in trace
+
+    This ensures:
+      - The supervisor always controls state management
+      - Sub-agents only return results without modifying global state
+      - Every delegated result flows into the workflow (no ignored results)
+
+    Args:
+        content: Result returned by sub-agent
+        agent_name: Name of the sub-agent that produced result
+        task: Task description for context
+        step_num: Step number for trace logging
+        trace_log: Trace log to record validation
 
     Returns:
-        The validated content (potentially with a warning appended).
+        The validated content (to be stored in VFS and used in subsequent steps).
+        Guarantees: Result is never ignored; it will be written to VFS next.
     """
+    # Sanitize first so stored outputs are free of reasoning traces.
+    content = sanitize_llm_output(content)
+
     # Validate: sub-agent returned something useful
     if not content or len(content.strip()) < 10:
         warning = (f"[WARNING] {agent_name} returned insufficient content "
@@ -200,10 +292,12 @@ def _integrate_result(content: str, agent_name: str, task: str,
                    f"Using fallback placeholder.")
         print(f"    ⚠ {warning}")
         _log_trace(trace_log, "result_validation", None,
-                   f"Sub-agent {agent_name} returned empty/short result — flagged",
-                   step_num, agent=agent_name)
+                   f"Sub-agent {agent_name} returned empty/short result — flagged for review",
+                   step_num, agent=agent_name,
+                   delegation_reasoning="result validation — insufficient content")
         content = f"[Insufficient result from {agent_name}] Task: {task}"
 
+    # ✅ Result is now guaranteed to be used (caller will write_file or edit_file)
     return content
 
 

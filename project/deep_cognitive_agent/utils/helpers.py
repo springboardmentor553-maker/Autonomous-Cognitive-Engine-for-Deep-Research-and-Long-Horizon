@@ -7,6 +7,9 @@ import time
 from typing import Optional
 
 
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.IGNORECASE | re.DOTALL)
+
+
 def parse_retry_after(err_str: str, default: int = 30) -> int:
     """Extract recommended wait seconds from a Groq rate-limit error message.
 
@@ -73,3 +76,18 @@ def truncate(text: str, max_length: int = 200, suffix: str = "...") -> str:
     if len(text) <= max_length:
         return text
     return text[:max_length - len(suffix)] + suffix
+
+
+def strip_think_blocks(text: str) -> str:
+    """Remove any <think>...</think> blocks from model output."""
+    if not isinstance(text, str) or not text:
+        return ""
+    return _THINK_BLOCK_RE.sub("", text).strip()
+
+
+def sanitize_llm_output(text: str) -> str:
+    """Normalize model output before storing or presenting it."""
+    cleaned = strip_think_blocks(text)
+    # Collapse excessive blank lines while preserving paragraph breaks.
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()

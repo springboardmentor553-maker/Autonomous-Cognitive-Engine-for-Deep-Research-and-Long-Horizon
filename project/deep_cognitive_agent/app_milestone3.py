@@ -44,10 +44,17 @@ What's new in Milestone 3:
 """
 
 import os
+import sys
+import io
 import json
 import time
 from typing import Dict
 from datetime import datetime
+
+# Fix Unicode output on Windows (cp1252 console can't print arrows/emojis)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 
@@ -297,6 +304,10 @@ def _save_results(final_state: dict, task: str):
         "files": final_state.get("files", {}),
         "trace_log": trace_log,
         "final_output": final_state.get("final_output", ""),
+        "quality_score": final_state.get("quality_score"),
+        "quality_target": final_state.get("quality_target"),
+        "quality_passed": final_state.get("quality_passed"),
+        "quality_report": final_state.get("quality_report", {}),
         "multi_agent_metrics": {
             "total_files": len(final_state.get("files", {})),
             "total_tool_calls": len(trace_log),
