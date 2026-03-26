@@ -15,7 +15,10 @@ class ExecutionState(TypedDict):
     step_outputs: List[str]
     reflection_notes: List[str]
 
-    final_answer: str
-
     # virtual file system
     files: Dict[str, str]
+    
+    delegation_log: List[Dict]
+    final_answer: str
+
+   

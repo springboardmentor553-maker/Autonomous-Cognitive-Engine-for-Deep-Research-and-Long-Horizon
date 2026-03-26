@@ -1,8 +1,3 @@
-"""
-Main Application - Milestone 1: ReAct Planning Agent
-LangChain 1.x + LangGraph 1.x + Gemini
-"""
-
 import os
 import ast
 import json
@@ -12,9 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -26,6 +19,7 @@ from project.deep_cognitive_agent.tools.filesystem.read_file import read_file
 from project.deep_cognitive_agent.tools.filesystem.edit_file import edit_file
 from project.deep_cognitive_agent.tools.filesystem.ls import ls
 
+
 # -------------------------
 # LLM (Gemini)
 # -------------------------
@@ -36,7 +30,7 @@ llm = ChatGoogleGenerativeAI(
     max_output_tokens=800,
 )
 
-# IMPORTANT: bind tools to model
+# Bind tools
 llm_with_tools = llm.bind_tools([
     write_todos,
     write_file,
@@ -46,27 +40,19 @@ llm_with_tools = llm.bind_tools([
 ])
 
 
-
-
 # -------------------------
 # System Prompt
 # -------------------------
 SYSTEM_PROMPT = """
-You are a strict autonomous planning agent.
+You are a supervisor agent.
 
-MANDATORY RULES:
-
-1. For ANY complex task, you MUST call the tool `write_todos` FIRST.
-2. You are NOT allowed to directly answer complex requests.
-3. You must always generate structured TODO steps before any explanation.
-4. If the tool is not called, the response is considered invalid.
-5. The tool output must contain exactly five steps.
-
-Failure to follow these rules is unacceptable.
-
-Always use planning-first behavior.
+Rules:
+1. Always create TODO plans first.
+2. Delegate specialized tasks when required.
+3. Store large outputs using write_file.
+4. Retrieve results using read_file.
+5. Integrate everything before final answer.
 """
-
 
 
 # -------------------------
@@ -102,18 +88,13 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
 
     todos = []
 
-    # DEBUG: print all messages (optional)
-    # print(final_state["messages"])
-
     for msg in final_state.get("messages", []):
-        # In LangGraph 1.x tool messages have type == "tool"
         if getattr(msg, "type", None) == "tool" and getattr(msg, "name", None) == "write_todos":
             
             content = msg.content
 
             if isinstance(content, list):
                 todos = content
-
             elif isinstance(content, str):
                 try:
                     todos = ast.literal_eval(content)
@@ -152,8 +133,9 @@ def run_full_agent(task: str):
         "execution_count": 0,
         "step_outputs": [],
         "reflection_notes": [],
+        "files": {},
+        "delegation_log": [],
         "final_answer": "",
-        "files": {}  
     }
 
     final_state = execution_graph.invoke(initial_state)
@@ -189,10 +171,11 @@ def save_result_to_json(result: Dict, filename: str, output_dir: str = "outputs"
 # -------------------------
 if __name__ == "__main__":
     print("=" * 70)
-    print("Milestone 2: Cognitive Execution Engine")
+    print("AUTONOMOUS COGNITIVE AGENT")
+    print("Milestone 4: Full Autonomous System")
     print("=" * 70)
 
-    task = "Explain how a recommendation system works"
+    task = "Summarize how a recommendation system works and list its key components"
 
     result = run_full_agent(task)
 
@@ -204,5 +187,30 @@ if __name__ == "__main__":
         print(result["final_answer"])
 
         print("\n" + "=" * 70)
+
+        # =========================================
+        # Evaluation
+        # =========================================
+
+        print("\n[EVALUATION] Scoring final output...\n")
+
+        evaluation = llm.invoke(
+            f"""
+Rate the quality of the following report from 1 to 10.
+
+Consider:
+- completeness
+- clarity
+- structure
+- usefulness
+
+Report:
+{result["final_answer"]}
+
+Return only a number.
+"""
+        )
+
+        print(f"Quality Score: {evaluation.content}")
 
     print("\nPipeline Execution Completed")

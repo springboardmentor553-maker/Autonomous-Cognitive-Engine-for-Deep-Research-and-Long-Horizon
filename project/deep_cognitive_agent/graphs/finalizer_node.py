@@ -1,6 +1,8 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from .execution_state import ExecutionState
+
 from project.deep_cognitive_agent.tools.filesystem.read_file import read_file
+
 import os
 
 
@@ -13,8 +15,12 @@ llm = ChatGoogleGenerativeAI(
 
 def finalize_answer(state: ExecutionState) -> ExecutionState:
     """
-    Combines all executed step outputs into
-    one structured final answer with confidence score.
+    Milestone 4 Finalizer
+
+    Responsibilities:
+    - Retrieve stored results (memory)
+    - Combine all data
+    - Generate structured final report
     """
 
     print("\n" + "=" * 60)
@@ -22,81 +28,76 @@ def finalize_answer(state: ExecutionState) -> ExecutionState:
     print(f"Total Steps Executed: {state['execution_count']}")
     print("=" * 60)
 
-    # ---- Read from Virtual File System (Milestone 2) ----
-    files = state.get("files", {})
+    # ==================================================
+    # READ FROM VIRTUAL FILE SYSTEM
+    # ==================================================
 
-    file_contents = []
+    files = state.get("files", {})
+    combined_data = ""
 
     if files:
         print("\n[VIRTUAL FILE SYSTEM] Reading stored step outputs")
 
-        for filename, content in files.items():
-            # tool call (LangSmith trace)
+        for filename in files:
+
+            # Tool call (LangSmith trace)
             read_file.invoke({
-                "filename": filename, 
+                "filename": filename,
                 "state": state
-            })  
+            })
+
             print(f"[READ FILE] {filename}")
-            file_contents.append(content)
+
+            combined_data += f"\n\n--- {filename} ---\n"
+            combined_data += files[filename]
 
     else:
         print("[WARNING] No files found in virtual file system")
 
-    combined_text = "\n\n".join(file_contents)
-    # ----------------------------------------------------
+    # ==================================================
+    # FINAL SYNTHESIS
+    # ==================================================
 
     response = llm.invoke(
-    f"""
-You are an expert technical writer synthesizing the final result of a multi-step autonomous agent execution.
+        f"""
+You are an expert AI system generating a final report.
 
 Original Task:
 {state['task']}
 
-Executed Step Outputs:
-{combined_text}
+Collected Data from Execution:
+{combined_data}
 
-Create a **clean, structured report** using the following format:
+Generate a clean, structured report with:
 
-----------------------------------------------------
-TITLE
-----------------------------------------------------
+1. Title
+2. Overview
+3. Key Steps Performed
+4. Detailed Explanation
+5. Final Conclusion
 
-1. Overview
-- Short explanation of the system/problem
-
-2. Key Components / Steps
-Summarize the 5 execution steps clearly.
-
-3. Detailed Explanation
-Explain the system in an organized way with headings.
-
-4. Architecture / Workflow
-Describe the process flow if relevant.
-
-5. Key Techniques or Algorithms
-List important methods used.
-
-6. Evaluation / Improvements
-Explain how the system can be improved.
-
-----------------------------------------------------
-End the report with a short **Conclusion**.
-
-Formatting Rules:
-• Use clear section headers  
-• Use bullet points when possible  
-• Avoid large text blocks  
-• Keep the explanation concise but informative
+Rules:
+- Keep it clear and readable
+- Avoid unnecessary symbols (*, ###)
+- Use simple structured formatting
+- Make it presentation-ready
 """
-  )
+    )
 
     final_answer = response.content
 
-    # Confidence scoring
+    # ==================================================
+    # CONFIDENCE SCORE
+    # ==================================================
+
     word_count = len(final_answer.split())
     confidence = "High" if word_count > 300 else "Moderate"
 
-    final_answer += f"\n\n---\nConfidence Level: {confidence}"
+    final_answer += f"\n\n--------------------------------\nConfidence Level: {confidence}\n--------------------------------"
+
+    # ==================================================
+    # SAVE FINAL ANSWER
+    # ==================================================
 
     state["final_answer"] = final_answer
 
