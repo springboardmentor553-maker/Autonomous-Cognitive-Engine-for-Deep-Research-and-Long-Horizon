@@ -66,7 +66,6 @@ cognitive-engine/
 ```
 
 ---
-
 ## Quick Start
 
 ### 1. Clone & install
