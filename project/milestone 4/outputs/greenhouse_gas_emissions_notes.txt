@@ -1,0 +1,2 @@
+Sources: IPCC, NASA, NOAA
+Limitations: Data may be subject to revision as new information becomes available.

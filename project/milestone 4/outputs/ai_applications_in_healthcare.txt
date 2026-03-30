@@ -1,0 +1,4 @@
+Medical imaging analysis: AI can help doctors diagnose diseases by analyzing medical images such as X-rays, CT scans, and MRIs.
+Disease diagnosis: AI can help doctors diagnose diseases by analyzing patient data and medical history.
+Patient data analysis: AI can help doctors analyze patient data to identify trends and patterns.
+Personalized medicine: AI can help doctors create personalized treatment plans for patients based on their genetic profiles and medical history.

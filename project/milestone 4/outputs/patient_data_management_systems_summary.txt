@@ -1,0 +1,1 @@
+AI-assisted patient data management systems have the potential to improve patient care by streamlining data management and reducing errors. However, limitations include data security concerns and the need for robust training data.

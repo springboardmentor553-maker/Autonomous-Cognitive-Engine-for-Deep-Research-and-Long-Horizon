@@ -1,0 +1,33 @@
+Final Report:
+
+AI in healthcare is a rapidly growing field with numerous applications. The key use cases include diagnosis and prediction, personalized medicine, clinical decision support, patient engagement, medical research, telemedicine, medical imaging analysis, predictive analytics, clinical trials, and medical education.
+
+Sources:
+
+* National Institutes of Health (NIH)
+* American Medical Association (AMA)
+* Healthcare Information and Management Systems Society (HIMSS)
+
+Limitations:
+
+* AI in healthcare is still a developing field, and there are many challenges to overcome, including data quality, bias, and regulation.
+
+* AI systems can be complex and difficult to interpret, which can make it challenging for healthcare professionals to understand and trust the results.
+
+* AI can exacerbate existing healthcare disparities if not designed and implemented carefully.
+
+* AI in healthcare requires significant investment in infrastructure, training, and personnel.
+
+Recommendations:
+
+* Invest in AI research and development to improve the accuracy and reliability of AI systems in healthcare.
+
+* Develop and implement AI systems that are transparent, explainable, and fair.
+
+* Ensure that AI systems are designed and implemented with consideration for healthcare disparities and equity.
+
+* Provide training and education for healthcare professionals on AI and its applications in healthcare.
+
+* Establish clear regulations and guidelines for the use of AI in healthcare.
+
+
