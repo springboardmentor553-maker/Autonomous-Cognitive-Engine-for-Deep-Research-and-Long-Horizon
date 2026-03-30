@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from workflow.flow import create_agent_executor, create_system_prompt
 from brains.filetools import clear_virtual_fs, FILE_SYSTEM_DIR
-import json
+
 
 # Enable LangSmith tracing
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
@@ -30,8 +30,8 @@ if not os.getenv("LANGCHAIN_API_KEY"):
 
 print("✓ Groq API key detected")
 print("✓ LangSmith tracing ENABLED")
-print(f"✓ Project: context_offloading")
-print(f"✓ Virtual FS: {FILE_SYSTEM_DIR.absolute()}\n")
+print("✓ Project: context_offloading")
+print("✓ Virtual FS: {FILE_SYSTEM_DIR.absolute()}\n")
 
 
 # ═══ TEST SCENARIO - 3 COUNTRY CULTURES ═══
@@ -184,7 +184,7 @@ CRITICAL:
                         args = tc.get("args", {})
                         read_operations.append(args.get("filename", "?"))
         
-        print(f"\n✓ Tool Invocations:")
+        print("\n✓ Tool Invocations:")
         for tool, count in sorted(tool_calls.items()):
             print(f"  • {tool}: {count} time(s)")
         
@@ -199,7 +199,7 @@ CRITICAL:
                 print(f"  {i}. {fname}")
         
         # Check files in directory
-        print(f"\n✓ Files in Virtual FS:")
+        print("\n✓ Files in Virtual FS:")
         print(f"  Directory: {FILE_SYSTEM_DIR.absolute()}")
         
         if current_files:
@@ -208,10 +208,10 @@ CRITICAL:
                 size = f.stat().st_size
                 print(f"    • {f.name} ({size} bytes)")
         else:
-            print(f"  ⚠ No files found!")
+            print("  ⚠ No files found!")
         
         # Validation
-        print(f"\n" + "=" * 90)
+        print("\n" + "=" * 90)
         print("VALIDATION RESULTS")
         print("=" * 90)
         
@@ -235,7 +235,7 @@ CRITICAL:
             print(f"  {icon} {check.replace('_', ' ').title()}: {passed}")
         
         # Detailed file check
-        print(f"\n  Required Country Files:")
+        print("\n  Required Country Files:")
         for req_file in required_files:
             exists = req_file in files_present
             icon = "✓" if exists else "✗"
@@ -243,25 +243,25 @@ CRITICAL:
         
         comparison_exists = "final_comparison.txt" in files_present
         icon = "✓" if comparison_exists else "✗"
-        print(f"\n  Comparison File:")
+        print("\n  Comparison File:")
         print(f"    {icon} final_comparison.txt: {'Created' if comparison_exists else 'Missing'}")
         
         all_passed = all(checks.values())
         
-        print(f"\n" + "=" * 90)
+        print("\n" + "=" * 90)
         if all_passed:
             print("🎉 CONTEXT OFFLOADING TEST: PASSED ✓")
             print("   All 3 country culture files + comparison created successfully!")
         else:
             print("⚠  CONTEXT OFFLOADING TEST: PARTIAL PASS")
             print("   Not all required files were created")
-            print(f"\n   Expected: germany_culture.txt, india_culture.txt, japan_culture.txt, final_comparison.txt")
+            print("\n   Expected: germany_culture.txt, india_culture.txt, japan_culture.txt, final_comparison.txt")
             print(f"   Got: {len(current_files)} files - {', '.join(f.name for f in current_files)}")
         print("=" * 90)
         
         # Show file contents
         if current_files:
-            print(f"\n" + "=" * 90)
+            print("\n" + "=" * 90)
             print("FILE CONTENTS")
             print("=" * 90)
             
@@ -292,7 +292,7 @@ CRITICAL:
                 except Exception as e:
                     print(f"Error reading: {e}")
         
-        print(f"\n" + "=" * 90)
+        print("\n" + "=" * 90)
         print("VIEW DETAILED TRACE IN LANGSMITH:")
         print("https://smith.langchain.com/ → Project: context_offloading")
         print("\nIn the trace, you should see:")
