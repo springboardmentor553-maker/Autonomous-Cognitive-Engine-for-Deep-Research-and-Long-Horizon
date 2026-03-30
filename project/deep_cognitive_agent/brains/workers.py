@@ -3,7 +3,6 @@ from langchain_core.prompts import ChatPromptTemplate
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
-# Specialized Prompts for each Worker
 PROMPTS = {
     "researcher": "You are a research specialist. Gather technical details on: {input}",
     "summarizer": "You are a summarization specialist. Condense this text professionally: {input}",
@@ -12,8 +11,7 @@ PROMPTS = {
     "refiner": "Review the following report and improve its clarity, tone, and structure: {input}"
 }
 
-def worker_logic(role: str, data: str):
-    """The generic engine for all specialized sub-agents."""
+def get_worker_chain(role: str):
+    """Returns the native LCEL chain so LangSmith can track it perfectly."""
     prompt = ChatPromptTemplate.from_template(PROMPTS[role])
-    chain = prompt | llm
-    return chain.invoke({"input": data}).content
+    return prompt | llm

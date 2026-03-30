@@ -6,16 +6,16 @@ It does NOT use hardcoded responses - the LLM generates the plan dynamically.
 """
 
 from typing import List, Dict
-# from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import tool
+from langgraph.types import Command
 import os
 from dotenv import load_dotenv
-load_dotenv() # This sucks in the LangSmith keys from your .env file
 
+load_dotenv() # This sucks in the LangSmith keys from your .env file
 
 # Initialize LLM for planning
 from langchain_google_genai import ChatGoogleGenerativeAI
-# ...
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
 # Planning prompt template
@@ -34,17 +34,11 @@ Task: {task}
 """
 )
 
-
-def write_todos(task: str) -> List[Dict]:
+@tool
+def write_todos(task: str):
     """
     Dynamically generate TODO items for a given task using LLM.
-    
-    Args:
-        task: The complex task to break down into steps
-        
-    Returns:
-        List[Dict]: A list of todo items with 'task' and 'status' keys
-        Example: [{"task": "Research topic X", "status": "pending"}, ...]
+    ALWAYS call this tool first to plan out the research steps.
     """
     # Use LLM to generate the plan dynamically
     formatted_prompt = planning_prompt.format(task=task)
@@ -67,15 +61,27 @@ def write_todos(task: str) -> List[Dict]:
                 "task": clean_step,
                 "status": "pending"
             })
-    
-    return todos
+            
+    # MILESTONE 4 UPGRADE: 
+    # Instead of returning a raw list, return a Command to update the AgentState
+    return Command(
+        update={
+            "todos": todos
+        }
+    )
 
 
 # For direct testing
 if __name__ == "__main__":
     test_task = "Build an AI chatbot architecture"
-    result = write_todos(test_task)
+    
+    # Because it is now a LangChain @tool, we use .invoke() and pass a dictionary
+    result = write_todos.invoke({"task": test_task})
+    
     print(f"Task: {test_task}")
-    print(f"Generated TODOs:")
-    for i, todo in enumerate(result, 1):
+    print(f"Generated TODOs (Pushing to State):")
+    
+    # Extract the payload from the Command object for testing visibility
+    extracted_todos = result.update.get("todos", [])
+    for i, todo in enumerate(extracted_todos, 1):
         print(f"  {i}. {todo['task']} [{todo['status']}]")

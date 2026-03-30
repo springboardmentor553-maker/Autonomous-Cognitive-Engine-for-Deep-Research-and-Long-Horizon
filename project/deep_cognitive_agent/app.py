@@ -1,126 +1,110 @@
-# Updated app.py
 import os
 import json
-import ast
-from typing import List, Dict
-from dotenv import load_dotenv
 import time
+from typing import Dict, List
+from dotenv import load_dotenv
 
 load_dotenv()
 
-# Set project name for Milestone 2
-os.environ["LANGCHAIN_PROJECT"] = "Milestone3 -> Sub-agents"
+# NOTE: The LANGCHAIN_PROJECT name is no longer hardcoded here.
+# It is now dynamically set in your test_milestone4.py file!
 
-from langchain_core.tools import Tool
-from langgraph.prebuilt import create_react_agent
-from langgraph.checkpoint.memory import MemorySaver
 from langchain_google_genai import ChatGoogleGenerativeAI
-from tools.execution.delegation_tool import task_delegate
-
-# Import Existing Planning Tool
-from tools.planning.write_todos import write_todos
-# Import New Milestone 2 Tools
-from tools.execution.file_tools import write_file, read_file, ls, edit_file
+from langchain_core.messages import HumanMessage
+from graphs.main_graph import build_cognitive_engine
 
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
 
-# Registering all tools
-# Note: creating a list of tools including your Milestone 1 tool
-tools = [write_todos, write_file, read_file, ls, edit_file, task_delegate]
-
-# ENHANCED SYSTEM PROMPT (Based on Mentor Notes)
-SYSTEM_PROMPT = """You are a Lead Research Supervisor. 
-
-You manage a team of specialists: researcher, summarizer, comparator, and refiner.
-
-DELEGATION PROTOCOL:
-1. **Initial Planning**: Always start with 'write_todos'.
-2. **Autonomous Workflow**:
-   - For raw data gathering, use the 'researcher'.
-   - For cleaning up dense research, use the 'summarizer'.
-   - For comparing multiple entities, use the 'comparator'.
-   - ALWAYS use the 'refiner' as the final step to produce the final answer.
-3. **Integration & Storage**: 
-   - Every time a sub-agent returns a result, you MUST call 'write_file' to save it to the Virtual File System.
-   - Use 'ls' to maintain awareness of the files your team has created.
-
-Your goal is to coordinate these experts to solve complex, long-horizon research tasks while maintaining a clean context window."""
-
-
 def create_planning_agent():
-    memory = MemorySaver()
-    # Updated to include all tools and the new prompt
-    agent = create_react_agent(
-        model=llm,
-        tools=tools,
-        checkpointer=memory,
-        prompt=SYSTEM_PROMPT
-    )
-    return agent
+    """Returns our custom compiled LangGraph Cognitive Engine."""
+    return build_cognitive_engine()
 
-# --- I have kept your run_agent and save_result_to_json functions identical to your M1 code ---
-def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
-    config = {"configurable": {"thread_id": thread_id}}
-    input_message = {"messages": [("user", task)]}
-    final_state = None
-    todos = []
+def generate_initial_plan(task: str) -> List[Dict]:
+    """Phase 1: Breaks down the user task into a structured list of todos."""
+    prompt = f"""
+    You are the Lead Strategic Planner. Break down the following task into a sequential list of sub-tasks.
+    Assign each sub-task to the most appropriate role: 'researcher', 'summarizer', 'comparator', or 'refiner'.
     
-    # We use stream to capture the tool calls properly
-    for event in agent.stream(input_message, config, stream_mode="values"):
-        time.sleep(2)
+    CRITICAL: You must output ONLY a valid JSON list of dictionaries with 'task' and 'status' keys.
+    The status must always be "pending".
+    
+    Task: {task}
+    """
+    
+    response = llm.invoke(prompt)
+    
+    try:
+        content = response.content.replace("```json", "").replace("```", "").strip()
+        todos = json.loads(content)
+        return todos
+    except Exception as e:
+        print(f"Error parsing plan, using fallback: {e}")
+        return [
+            {"task": f"researcher: Gather data on {task}", "status": "pending"},
+            {"task": "refiner: Polish the final output", "status": "pending"}
+        ]
+
+def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
+    """Phase 2: Runs the Cognitive Engine with the generated plan."""
+    print("\n🧠 PHASE 1: Generating Execution Plan...")
+    todos = generate_initial_plan(task)
+    
+    print(f"📋 Plan generated with {len(todos)} steps:")
+    for i, t in enumerate(todos, 1):
+        print(f"  {i}. {t['task']}")
+        
+    initial_state = {
+        "messages": [HumanMessage(content=task)],
+        "todos": todos
+    }
+    
+    config = {"configurable": {"thread_id": thread_id}}
+    final_state = None
+    
+    print("\n⚙️ PHASE 2: Starting Multi-Agent Engine Execution...")
+    
+    for event in agent.stream(initial_state, config, stream_mode="values"):
         final_state = event
-        if "messages" in event:
-            for msg in event["messages"]:
-                if hasattr(msg, 'name') and msg.name == "write_todos":
-                    try:
-                        content = msg.content
-                        if isinstance(content, str):
-                            clean_content = content.strip()
-                            todos = ast.literal_eval(clean_content) if clean_content.startswith('[') else []
-                        elif isinstance(content, list):
-                            todos = content
-                    except:
-                        pass
+        
+        current_todos = event.get("todos", [])
+        pending = [t for t in current_todos if t.get("status") == "pending"]
+        done = [t for t in current_todos if t.get("status") == "done"]
+        
+        if len(current_todos) > 0:
+            print(f"🔄 Graph Update: {len(done)} tasks done, {len(pending)} pending...")
+        time.sleep(1) 
+        
     return {
         "task": task,
         "messages": final_state.get("messages", []) if final_state else [],
-        "todos": todos
+        "todos": final_state.get("todos", []) if final_state else []
     }
 
 def save_result_to_json(result: Dict, filename: str, output_dir: str = "outputs"):
+    """Saves the final state and extracts the Final Answer."""
     os.makedirs(output_dir, exist_ok=True)
     serializable_result = {
         "task": result["task"],
         "todos": result["todos"],
         "message_count": len(result["messages"])
     }
+    
+    # --- THE MAGIC HAPPENS HERE ---
+    # Because we injected AIMessage(content=result) in execution_node.py,
+    # this loop will perfectly catch the last agent's output (usually the Refiner)
+    # and save it as the 'final_response' in your JSON file!
     for msg in reversed(result["messages"]):
         if hasattr(msg, 'content') and hasattr(msg, 'type') and msg.type == "ai":
             serializable_result["final_response"] = msg.content
             break
+            
     filepath = os.path.join(output_dir, filename)
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(serializable_result, f, indent=2, ensure_ascii=False)
-    print(f"Saved result to {filepath}")
+    print(f"✅ Saved result to {filepath}")
     return filepath
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Milestone 2: Context Offloading Engine")
+    print("Cognitive Engine Ready")
     print("=" * 60)
-    
-    agent = create_planning_agent()
-    
-    # Mentor's test case: Process 3 distinct pieces of info
-    test_task = """
-    I have three reports:
-    1. Climate report: Global temps rose 1.2C.
-    2. Energy report: Solar usage is up 20%.
-    3. Policy report: New green tax implemented.
-    
-    Summarize each into separate files, then read ONLY the climate and energy files 
-    to tell me the correlation between temp rise and solar adoption.
-    """
-    
-    result = run_agent(agent, test_task, thread_id="m2-test-1")
-    save_result_to_json(result, "m2_output.json")

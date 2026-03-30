@@ -1,25 +1,36 @@
 from langchain_core.tools import tool
-from tools.filesystem.storage import vfs
+from langgraph.types import Command
+from langgraph.prebuilt import InjectedState
+from typing import Annotated
 
 @tool
 def write_file(filename: str, content: str):
-    """Write summarized content to a virtual file. Use this to offload context."""
-    return vfs.write(filename, content)
+    """Saves a file to the Virtual File System (VFS). Use this to store intermediate research."""
+    
+    print(f"💾 Saving to VFS State: {filename}")
+    
+    # Push the new file into the state dictionary
+    return Command(
+        update={
+            "files": {filename: content}
+        }
+    )
 
 @tool
-def read_file(filename: str):
-    """Read a specific file. ONLY load the files needed for the current step."""
-    return vfs.read(filename)
+def read_file(filename: str, state: Annotated[dict, InjectedState]):
+    """
+    Reads the content of a file from the Virtual File System (VFS).
+    Use this to retrieve intermediate results for final synthesis.
+    """
+    files = state.get("files", {})
+    
+    if filename in files:
+        print(f"📖 Reading from VFS: {filename}")
+        return files[filename]
+    else:
+        return f"Error: File '{filename}' not found in the VFS. Available files: {list(files.keys())}"
 
 @tool
-def ls(_: str = ""):
-    """List all available files in the virtual system."""
-    files = vfs.ls()
-    return f"Available files: {files}" if files else "No files found."
-
-@tool
-def edit_file(filename: str, new_content: str):
-    """Update/Edit an existing virtual file with refined information."""
-    if filename in vfs.files:
-        return vfs.write(filename, new_content)
-    return f"File '{filename}' not found."
+def ls():
+    """Lists all files currently saved in the Virtual File System."""
+    return "Check your state['files'] keys for current directory contents."

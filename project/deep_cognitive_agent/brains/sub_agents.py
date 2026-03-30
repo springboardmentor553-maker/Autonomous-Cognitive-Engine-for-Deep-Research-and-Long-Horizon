@@ -1,10 +1,9 @@
-from brains.workers import worker_logic
-from langchain_core.runnables import RunnableLambda
+from brains.workers import get_worker_chain
 
-# Create Runnable objects for the Supervisor to invoke
+# Export the native chains so config passes through them automatically
 SUB_AGENTS = {
-    "researcher": RunnableLambda(lambda x: worker_logic("researcher", x)),
-    "summarizer": RunnableLambda(lambda x: worker_logic("summarizer", x)),
-    "comparator": RunnableLambda(lambda x: worker_logic("comparator", x)),
-    "refiner": RunnableLambda(lambda x: worker_logic("refiner", x))
+    "researcher": get_worker_chain("researcher"),
+    "summarizer": get_worker_chain("summarizer"),
+    "comparator": get_worker_chain("comparator"),
+    "refiner": get_worker_chain("refiner")
 }
