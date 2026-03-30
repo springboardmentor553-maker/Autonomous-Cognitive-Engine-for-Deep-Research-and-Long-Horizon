@@ -1,106 +1,131 @@
 """
-Researcher agent with web search capability - Groq Compatible
+Researcher Agent - Balanced Content Generation
 """
 from langchain_core.tools import tool
 from langchain_groq import ChatGroq
 import json
 
-
 @tool
 def web_search(query: str) -> str:
     """Search the web for information. Use this tool to find current information about any topic.
-    
     Args:
         query: The search query string to look up information
-    
     Returns:
-        JSON string containing search results with titles, URLs, and snippets
+        JSON string containing search results with comprehensive but balanced information
     """
-    # Mock implementation - returns realistic sample data
+    # BALANCED MOCK DATA - Detailed but token-efficient
     return json.dumps({
         "query": query,
         "status": "success",
         "results": [
             {
-                "title": f"Latest Developments in {query}",
-                "url": f"https://example.com/{query.replace(' ', '-')}",
-                "snippet": f"Comprehensive analysis of {query} including current market trends, "
-                          f"technological innovations, and future projections. Key findings show "
-                          f"significant growth with declining costs and widespread adoption across sectors."
+                "title": f"Market Analysis: {query} - 2024 Report",
+                "snippet": f"""
+Current market analysis of {query} shows significant growth with the following key metrics:
+
+MARKET SIZE & GROWTH:
+- Global market valuation: $127.3B (2024), projected $215B by 2028
+- CAGR: 23.5% through 2028
+- Regional distribution: North America 38%, Asia-Pacific 31%, Europe 24%, Rest of World 7%
+
+KEY DRIVERS:
+- Digital transformation initiatives driving 47% YoY growth
+- Increased enterprise adoption: 73% of Fortune 500 companies actively implementing
+- Cost optimization pressures accelerating deployment timelines
+- Regulatory compliance requirements creating new market segments
+
+COMPETITIVE LANDSCAPE:
+- Top 5 players control 62% market share
+- Leading vendors: [Company A, Company B, Company C] with combined 45% share
+- Emerging startups capturing niche segments with innovative approaches
+- M&A activity increasing: $8.4B in deals announced in 2024 (+31% YoY)
+
+TECHNOLOGY TRENDS:
+- AI integration in 54% of new deployments
+- Cloud-native architectures dominating (78% of implementations)
+- Edge computing adoption growing 56% annually
+- Enhanced security protocols becoming standard requirement
+
+CHALLENGES:
+- Talent shortage: 2.3M qualified professionals needed by 2026
+- Integration complexity with legacy systems
+- Regulatory uncertainty in emerging markets
+- Cybersecurity concerns cited by 62% of CISOs
+                """,
+                "url": f"https://market-research.com/{query.replace(' ', '-')}",
+                "date": "2024-12-15"
             },
             {
-                "title": f"{query} - Industry Report 2024",
-                "url": f"https://research.example.com/{query.replace(' ', '-')}-2024",
-                "snippet": f"Detailed industry report on {query} covering market size, competitive landscape, "
-                          f"and strategic recommendations. Analysis indicates strong momentum with "
-                          f"continued investment and technological advancement."
-            },
-            {
-                "title": f"Future Outlook: {query}",
-                "url": f"https://insights.example.com/future-{query.replace(' ', '-')}",
-                "snippet": f"Forward-looking perspective on {query} examining emerging trends, "
-                          f"challenges, and opportunities. Projections suggest sustained expansion "
-                          f"driven by policy support and innovation."
+                "title": f"Future Outlook: {query} - Strategic Forecast 2025-2030",
+                "snippet": f"""
+Expert analysis projects transformative evolution of {query} across multiple horizons:
+
+NEAR-TERM (2025-2026):
+- Mainstream adoption reaching 65% of target market
+- Standardization reducing vendor fragmentation
+- Automation capabilities improving efficiency by 60%
+- AI/ML integration becoming standard feature
+
+MID-TERM (2027-2028):
+- Platform consolidation with top 3 providers capturing 75% share
+- Vertical-specific solutions emerging for healthcare, finance, manufacturing
+- Autonomous operations reducing human oversight by 80%
+- Outcome-based pricing models replacing traditional licensing
+
+LONG-TERM (2029-2030):
+- Ubiquitous deployment reaching 85%+ market penetration
+- Convergence with quantum computing for high-value use cases
+- Decentralized architectures gaining prominence
+- Market maturity leading to commoditization of basic features
+
+INVESTMENT TRENDS:
+- VC funding: $45-60B projected over forecast period
+- Public market valuations: 12-15x revenue multiples
+- Strategic M&A activity accelerating in 2025-2026
+
+RISK FACTORS:
+- Economic sensitivity to discretionary IT spending
+- Potential regulatory restrictions in key markets
+- Emerging technology disruption from new entrants
+- Cybersecurity threat landscape evolution
+                """,
+                "url": f"https://future-insights.com/{query.replace(' ', '-')}",
+                "date": "2024-11-28"
             }
         ],
-        "result_count": 3
+        "result_count": 2,
+        "search_time": "0.284s"
     })
 
-
 def create_researcher_agent():
-    """
-    Create researcher agent with web search and file tools.
-    Returns: (llm_with_tools, system_prompt) tuple
-    """
+    """Create researcher agent with requirements for detailed content"""
     from brains.filetools import write_file, read_file
     
-    llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
-        temperature=0.0
-    )
-    
-    # Bind tools to LLM - Groq will convert to OpenAI format automatically
+    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.3)
     tools = [web_search, write_file, read_file]
-    
-    # CRITICAL: Use bind_tools with strict=False for Groq compatibility
     llm_with_tools = llm.bind_tools(tools, strict=False)
     
-    system_prompt = """You are a Research Specialist focused on gathering accurate information.
-
-YOUR ROLE:
-- Conduct web searches for assigned research topics
-- Analyze search results and extract key information
-- Synthesize findings into clear, concise summaries (150-250 words)
-- Store research results in appropriately named files
-
-CRITICAL WORKFLOW - FOLLOW EXACTLY:
-1. Receive research task from Supervisor
-2. Identify 2-3 search queries related to the task
-3. Call web_search tool for EACH query (you MUST call this tool)
-4. Analyze all search results from the tool responses
-5. Write a comprehensive summary combining all findings
-6. Call write_file tool to save your summary with a descriptive filename
-
-EXAMPLE:
-Task: "Research solar energy technology and market trends"
-Step 1: Call web_search with query "solar energy technology 2024"
-Step 2: Call web_search with query "solar panel market trends"  
-Step 3: Analyze the results from both searches
-Step 4: Write a 200-word summary synthesizing the information
-Step 5: Call write_file(filename="solar_energy_research.txt", content="[your summary]")
-
-FILENAME CONVENTIONS:
-- Use descriptive names: "solar_energy_research.txt" not "research1.txt"
-- Use underscores: "wind_power_analysis.txt" not "wind-power-analysis.txt"  
-- Include topic: "renewable_outlook_research.txt" not "outlook.txt"
+    system_prompt = """You are a Research Specialist conducting comprehensive analysis.
 
 REQUIREMENTS:
-✓ ALWAYS call web_search at least TWICE per research task
-✓ ALWAYS call write_file to save results
-✓ Keep summaries focused: 150-250 words
-✓ Include key facts, trends, and data points
-✓ Use the actual content returned by web_search in your summary
+1. ALWAYS call web_search at least 2 times per task
+2. ALWAYS call write_file to save findings
+3. Create files with 300-400 words of analysis
+4. Include specific data points and statistics from search results
 
-You are the data gathering specialist - be thorough and organized!"""
+CONTENT STRUCTURE:
+- Executive Summary (2-3 sentences)
+- Key Findings (5-7 bullet points with data)
+- Analysis (150-200 words)
+- Future Outlook (100 words)
+
+EXAMPLE WORKFLOW:
+1. web_search("topic market analysis")
+2. web_search("topic future trends")
+3. Synthesize findings from both searches
+4. write_file("topic_research.txt", <comprehensive 350-word analysis>)
+
+Extract ALL key statistics and data points from search results. Provide professional analysis.
+"""
     
     return llm_with_tools, system_prompt
