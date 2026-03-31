@@ -26,15 +26,8 @@ Transitioned from a single monolithic agent to a structured, multi-agent delegat
   * ✨ **Refiner:** Synthesizes final outputs into professional, formatted reports.
 
 ### Milestone 4: The Fully Autonomous Agent
-The culmination of the project, merging the VFS context management (Milestone 2) with the specialized delegation system (Milestone 3) into a single, cohesive LangGraph `StateGraph`. 
-* **Phase 1 (Strategic Planning):** A Lead Planner translates user prompts into a structured, JSON-formatted execution plan (an array of `todos`).
-* **Phase 2 (Autonomous Execution):** A Supervisor Router systematically passes the state through the graph, invoking the exact specialist needed, offloading data to the VFS, and injecting final synthesized reports directly into the graph's memory for seamless extraction.
+The culmination of the project, from sub-task of Complex task (Milestone 1), merging the VFS context management (Milestone 2) with the specialized delegation system (Milestone 3) into a single, cohesive LangGraph `StateGraph`. 
 
-## 📊 Deep Telemetry & Tracing
-This engine features a "Gold Standard" LangSmith integration designed for deep debugging and performance monitoring:
-* **LCEL Native Tracking:** Bypasses opaque lambda wrappers to provide deeply nested, hierarchical waterfall traces, keeping tool calls (`write_file`) perfectly linked to their parent LLM executions.
-* **Custom UI Tabs:** Graph state injections dynamically render custom tabs (e.g., `RESEARCHER_OUTPUT`, `REFINER_OUTPUT`) inside the LangSmith dashboard for clean, readable state inspection.
-* **Dynamic Environments:** Test suites dynamically inject `LANGCHAIN_PROJECT` variables to keep workspaces strictly organized by testing phase.
 
 ## 📁 Repository Structure
 
