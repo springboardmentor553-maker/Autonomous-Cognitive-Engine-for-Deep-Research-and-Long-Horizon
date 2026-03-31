@@ -1,14 +1,15 @@
-file_store = {}
+# Simple in-memory file system
+
+file_system = {}
 
 
 def write_file(filename, content):
-    file_store[filename] = content
-    print(f"WRITE FILE → {filename}")
+    file_system[filename] = content
 
 
 def read_file(filename):
-    return file_store.get(filename, "")
+    return file_system.get(filename, "")
 
 
-def list_files():
-    return list(file_store.keys())
+def ls():
+    return list(file_system.keys())

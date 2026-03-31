@@ -9,8 +9,8 @@ from __future__ import annotations
 from langchain_core.messages import AIMessage
 
 from state import AgentState
-from utils.helpers import all_todos_done, next_pending_todo
-from utils.logger import get_logger
+from backend.utils.helpers import all_todos_done, next_pending_todo
+from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

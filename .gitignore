@@ -13,3 +13,4 @@ __pycache__/
 # Project runtime data
 memory/
 outputs/
+*.txt

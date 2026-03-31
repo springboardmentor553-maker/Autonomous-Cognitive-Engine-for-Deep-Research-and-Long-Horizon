@@ -1,21 +1,25 @@
 from backend.config.gemini_config import client
 
-def research_agent(task):
+def analysis_agent(input_text):
+
     prompt = f"""
-Do detailed research on: {task}
+Analyze the following content:
+
+{input_text}
 
 FORMAT RULES:
-- Use short paragraphs (max 2 lines)
 - No markdown (** or *)
 - No repeated lines
 - Use clean bullets (•)
+- Keep spacing proper
+- Keep paragraphs short
 - Add spacing between sections
-- Avoid long blocks of text
-- Make it clean and readable
+- Avoid long text blocks
 """
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )
+
     return response.text

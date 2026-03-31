@@ -1,60 +1,57 @@
-# Autonomous Cognitive Engine
+# 🧠 Autonomous Cognitive Engine
 
-An autonomous multi-agent system that plans, executes, and summarizes complex tasks.
-
----
-
-## Milestones
-
-### Milestone 1 — Core Engine
-- Task planning module  
-- Execution framework  
-- Delegation and evaluation system  
-
-### Milestone 2 — Virtual File System
-- Store and manage intermediate outputs  
-- Tools: `ls()`, `write_file()`, `read_file()`, `edit_file()`  
-
-### Milestone 3 — Multi-Agent System
-- Research Agent (data collection)  
-- Analysis Agent (insight extraction)  
-- Summarizer Agent (final summaries)  
-- Final summary across all tasks  
+AI-powered research assistant built using Streamlit and an autonomous backend agent.
 
 ---
 
-## How It Works
+## 🚀 Features
 
-1. User gives a complex objective  
-2. System creates a task plan  
-3. Each task runs through:
-   - Research → Analysis → Summary  
-4. Final summary is generated  
+- 🔎 Accepts natural language queries
+- 📌 Structured output:
+  - Research
+  - Analysis
+  - Summary
+- 🧠 Intelligent section splitting
+- 📊 Output metrics (words & characters)
+- 📥 Export options:
+  - TXT
+  - PDF
+- 💬 Chat-style interface with history
+- ⚙️ Dual modes:
+  - Summary (fast)
+  - Detailed (full pipeline)
 
 ---
 
-## Run the Project
+## 🏗️ Architecture
+
+Frontend:
+- Streamlit UI (chat interface, tabs, export)
+
+Backend:
+- Autonomous agent (`run_agent`)
+- Handles:
+  - Query processing
+  - AI response generation
+  - Structured formatting
+
+---
+
+## 🔄 Workflow
+
+1. User enters query
+2. Frontend sends input to backend
+3. Backend (`run_agent`) processes request
+4. Response is cleaned & split into sections
+5. UI displays:
+   - Research
+   - Analysis
+   - Summary
+
+
+---
+
+## ⚙️ Installation
 
 ```bash
-python -m backend.main
-```
-
----
-
-## Example
-
-**Input:**  
-Explain three applications of AI in healthcare  
-
-**Output:**  
-- Medical Imaging  
-- Decision Support Systems  
-- Chatbots  
-- Final Summary  
-
----
-
-## Tech Stack
-- Python  
-- Multi-Agent Architecture  
-- Virtual File System  
+pip install -r requirements.txt

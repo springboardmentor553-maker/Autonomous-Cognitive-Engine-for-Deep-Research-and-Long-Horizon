@@ -43,7 +43,7 @@ from graph.router import (
 from state import AgentState
 from tools import ALL_TOOLS
 from tools.filesystem import bind_vfs
-from utils.logger import get_logger
+from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

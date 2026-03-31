@@ -9,8 +9,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pathlib import Path
 
 import config
-from utils.logger import get_logger
-from utils.parser import safe_json_loads
+from backend.utils.logger import get_logger
+from backend.utils.parser import safe_json_loads
 
 logger = get_logger(__name__)
 

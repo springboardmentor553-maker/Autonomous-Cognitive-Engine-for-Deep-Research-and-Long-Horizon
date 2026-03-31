@@ -13,8 +13,8 @@ from pathlib import Path
 
 import config
 from tools.planning.write_todos import write_todos
-from utils.logger import get_logger
-from utils.parser import safe_json_loads
+from backend.utils.logger import get_logger
+from backend.utils.parser import safe_json_loads
 
 logger = get_logger(__name__)
 

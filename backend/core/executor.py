@@ -1,108 +1,192 @@
-from backend.tools.delegation_tool import task_tool
-from backend.tools.file_system_tools import write_file, read_file
-from backend.tools.planning_tool import write_todos
+from backend.sub_agents.research_agent import research_agent
+from backend.sub_agents.analysis_agent import analysis_agent
+from backend.sub_agents.summarizer_agent import summarizer_agent
+from backend.sub_agents.web_search_agent import search_web
+from backend.memory.memory_manager import MemoryManager
+from backend.core.evaluator import evaluate_output   # ✅ ADDED
+
+import time
+import re
+
+memory = MemoryManager()
 
 
-def run_agent(objective):
+# 🔥 SAFE CALL (handles API errors)
+def safe_call(agent_function, input_text, retries=5):
+    last_error = None
 
-    # -------------------------------
-    # STEP 1: PLANNING
-    # -------------------------------
-    todos = write_todos(objective)
+    for attempt in range(retries):
+        try:
+            return agent_function(input_text)
 
-    # -------------------------------
-    # STEP 2: EXECUTION
-    # -------------------------------
-    for i, task in enumerate(todos, 1):
+        except Exception as e:
+            last_error = str(e)
 
-        task_name = task["task"]
+            if "503" in last_error:
+                wait_time = 2 * (attempt + 1)
+                print(f"⚠️ Server busy... retrying in {wait_time}s")
+                time.sleep(wait_time)
 
-        print(f"\n--- Task {i}: {task_name} ---\n")
+            elif "429" in last_error or "RESOURCE_EXHAUSTED" in last_error:
+                print("🚫 Rate limit hit!")
 
-        # -------------------------------
-        # FINAL SUMMARY HANDLING
-        # -------------------------------
-        if "Final Summary" in task_name:
+                match = re.search(r"retry in (\d+)", last_error.lower())
+                wait_time = int(match.group(1)) + 2 if match else 30
 
-            print("\nGenerating Final Insights Across All Tasks...\n")
+                print(f"⏳ Waiting {wait_time}s...")
+                time.sleep(wait_time)
 
-            print("TASK TOOL → Evaluating task: final summary")
+            else:
+                raise e
 
-            all_summaries = ""
+    return f"❌ Failed after retries: {last_error}"
 
-            for j in range(1, i):
-                all_summaries += read_file(f"summary_{j}.txt") + "\n"
+def clean_output(text):
+    import re
 
-            final_summary = task_tool("summary", "FINAL " + all_summaries)
+    text = text.strip()
 
-            write_file(f"summary_{i}.txt", final_summary)
+    # ❌ Remove markdown stars (***, **)
+    text = re.sub(r"\*{1,3}", "", text)
 
-            continue
+    # ❌ Remove repeated dots (..., ..)
+    text = re.sub(r"\.{2,}", ".", text)
 
-        # -------------------------------
-        # STEP 2.1 → RESEARCH
-        # -------------------------------
-        print("TASK TOOL → Evaluating task: research")
-        research = task_tool("research", task_name)
+    # ❌ Fix bullet mess
+    text = text.replace("• *", "•")
+    text = text.replace("* •", "•")
 
-        write_file(f"research_{i}.txt", research)
+    # ❌ Remove duplicate lines
+    lines = []
+    seen = set()
 
-        # -------------------------------
-        # STEP 2.2 → ANALYSIS
-        # -------------------------------
-        print("TASK TOOL → Evaluating task: analysis")
-        analysis = task_tool("analysis", research)
+    for line in text.split("\n"):
+        line = line.strip()
+        if line and line not in seen:
+            lines.append(line)
+            seen.add(line)
 
-        write_file(f"analysis_{i}.txt", analysis)
+    text = "\n".join(lines)
 
-        # -------------------------------
-        # STEP 2.3 → SUMMARY
-        # -------------------------------
-        print("TASK TOOL → Evaluating task: summary")
-        summary = task_tool("summary", analysis)
+    # ✅ Add spacing for sections
+    text = text.replace("📌 DETAILED REPORT", "\n📌 DETAILED REPORT\n")
+    text = text.replace("🧠 ANALYSIS", "\n\n🧠 ANALYSIS\n")
+    text = text.replace("📊 FINAL SUMMARY", "\n\n📊 FINAL SUMMARY\n")
 
-        write_file(f"summary_{i}.txt", summary)
+    # ✅ Clean bullet formatting
+    text = text.replace("•", "\n•")
 
-    # -------------------------------
-    # STEP 3: FINAL REPORT
-    # -------------------------------
-    print("\n\nFINAL EXECUTION REPORT")
-    print("=" * 60)
+    # ✅ Clean numbered list
+    for i in range(1, 10):
+        text = text.replace(f"{i}.", f"\n{i}.")
 
-    # -------------------------------
-    # TASK PLAN
-    # -------------------------------
-    print("\nTASK PLAN:\n")
+    # ✅ Final cleanup (remove extra blank lines)
+    final = "\n".join([l.strip() for l in text.split("\n") if l.strip()])
 
-    for i, task in enumerate(todos, 1):
-        print(f"{i}. {task['task']}")
-        print("   → This task explores an important AI application in healthcare.\n")
+    return final
 
-    # -------------------------------
-    # DETAILED RESULTS
-    # -------------------------------
-    print("\nDETAILED RESULTS\n")
+def run_agent(objective, output_format="summary"):
 
-    for i in range(1, len(todos) + 1):
+    print("\n" + "="*50)
+    print(f"🧠 Task: {objective}")
+    print("="*50)
 
-        print(f"\n========== TASK {i} ==========\n")
+    try:
+        past_context = memory.recall(objective)
+        context_text = "\n".join([item["content"] for item in past_context]) if past_context else ""
 
-        # FINAL SUMMARY → show only summary
-        if i == len(todos):
+        # ===============================
+        # 🚀 SUMMARY MODE
+        # ===============================
+        if output_format == "summary":
 
-            print(f"--- summary_{i}.txt ---\n")
-            print(read_file(f"summary_{i}.txt"))
+            summary_prompt = f"""
+Create a clean structured summary.
 
-            break
+Rules:
+- Max 120 words
+- No repetition
 
-        # NORMAL TASKS
-        print(f"--- research_{i}.txt ---\n")
-        print(read_file(f"research_{i}.txt"))
+Topic: {objective}
+"""
 
-        print(f"\n--- analysis_{i}.txt ---\n")
-        print(read_file(f"analysis_{i}.txt"))
+            result = safe_call(summarizer_agent, summary_prompt)
 
-        print(f"\n--- summary_{i}.txt ---\n")
-        print(read_file(f"summary_{i}.txt"))
+            # ✅ ADD EVALUATION
+           # evaluate_output(result)
 
-    print("\n--- Execution Completed Successfully ---\n")
+            return result
+
+        # ===============================
+        # 🚀 DETAILED MODE
+        # ===============================
+
+        web_data = search_web(objective)
+        if not web_data.strip():
+            web_data = "No relevant web data found."
+
+        print("✅ Web search done")
+
+        research_input = f"""
+Topic: {objective}
+
+Use:
+- Latest trends
+- Examples
+- Statistics
+
+Context:
+{context_text}
+
+Web Data:
+{web_data}
+
+Limit: 400 words max
+"""
+
+        research = safe_call(research_agent, research_input)
+        if "❌" in research:
+            return research
+
+        print("✅ Research done")
+
+        analysis = safe_call(analysis_agent, research)
+        if "❌" in analysis:
+            return analysis
+
+        print("✅ Analysis done")
+
+        final_output = safe_call(summarizer_agent, research)
+        if "❌" in final_output:
+            return final_output
+
+        # 💾 MEMORY
+        memory.after_run(objective, final_output, todos=[])
+
+        output = f"""
+📌 DETAILED REPORT
+
+{research}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+🧠 ANALYSIS
+
+{analysis}
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+📊 FINAL SUMMARY
+
+{final_output}
+""".strip()
+
+        output = clean_output(output)
+
+        # ✅ ADD EVALUATION HERE
+        evaluate_output(output)
+
+        return output
+
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
