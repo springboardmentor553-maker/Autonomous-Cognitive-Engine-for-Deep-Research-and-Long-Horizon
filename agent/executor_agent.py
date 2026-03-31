@@ -13,7 +13,7 @@ from pathlib import Path
 
 import config
 from tools import ALL_TOOLS
-from utils.logger import get_logger
+from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -85,8 +85,8 @@ class ExecutorAgent:
 
     def _apply_vfs_effects(self, result: str) -> None:
         """Apply write_file / edit_file side-effects to self.vfs."""
-        from utils.parser import safe_json_loads
-        from utils.helpers import utc_now
+        from backend.utils.parser import safe_json_loads
+        from backend.utils.helpers import utc_now
 
         parsed = safe_json_loads(result) if isinstance(result, str) else None
         if not isinstance(parsed, dict):

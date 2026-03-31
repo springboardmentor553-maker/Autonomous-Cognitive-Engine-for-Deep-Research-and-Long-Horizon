@@ -64,7 +64,7 @@ def print_vfs(vfs: dict) -> None:
 def run(request: str, verbose: bool = False) -> str:
     """Execute the full agent pipeline for a given request."""
     from graph.build_graph import build_graph
-    from memory.memory_manager import MemoryManager
+    from backend.memory.memory_manager import MemoryManager
 
     memory = MemoryManager()
     graph = build_graph()

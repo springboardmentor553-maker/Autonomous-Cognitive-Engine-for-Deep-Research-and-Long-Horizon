@@ -18,7 +18,7 @@ from tools.research.extract_entities import extract_entities
 from tools.filesystem.write_file import write_file
 from tools.filesystem.read_file import read_file
 from tools.filesystem.ls import ls
-from utils.logger import get_logger
+from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
