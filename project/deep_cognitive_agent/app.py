@@ -2,7 +2,7 @@ import os
 import ast
 import json
 import time
-from typing import Dict
+from typing import TypedDict, List, Dict, Any
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,6 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from project.deep_cognitive_agent.tools.planning.write_todos import write_todos
 from project.deep_cognitive_agent.graphs.execution_graph import build_execution_graph
+from project.deep_cognitive_agent.graphs.execution_state import ExecutionState
 
 from project.deep_cognitive_agent.tools.filesystem.write_file import write_file
 from project.deep_cognitive_agent.tools.filesystem.read_file import read_file
@@ -111,6 +112,17 @@ def run_agent(agent, task: str, thread_id: str = "default") -> Dict:
 # -------------------------
 # Full Cognitive Flow 
 # -------------------------
+class ExecutionState(TypedDict):
+    task: str
+    todos: List[Dict[str, Any]]
+    current_step: int
+    execution_count: int
+    step_outputs: List[Any]
+    reflection_notes: List[str]
+    files: Dict[str, str]
+    delegation_log: List[Dict[str, Any]]
+    final_answer: str
+
 def run_full_agent(task: str):
 
     start_time = time.time()
@@ -126,7 +138,7 @@ def run_full_agent(task: str):
 
     execution_graph = build_execution_graph()
 
-    initial_state = {
+    initial_state: ExecutionState = {
         "task": task,
         "todos": todos,
         "current_step": 0,

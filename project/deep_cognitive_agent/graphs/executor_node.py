@@ -88,7 +88,7 @@ def execute_step(state: ExecutionState) -> ExecutionState:
 
             # STORE OUTPUT
 
-            state["step_outputs"].append(output)
+            state["step_outputs"].append(str(output))
 
             if "files" not in state:
                 state["files"] = {}
@@ -96,7 +96,7 @@ def execute_step(state: ExecutionState) -> ExecutionState:
             filename = f"step_{step_index + 1}.txt"
 
             # Save in virtual memory
-            state["files"][filename] = output
+            state["files"][filename] = str(output)
 
             # Save via tool (for LangSmith trace)
             write_file.invoke({

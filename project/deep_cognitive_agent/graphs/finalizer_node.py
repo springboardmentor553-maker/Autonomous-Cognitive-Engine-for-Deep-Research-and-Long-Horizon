@@ -84,7 +84,7 @@ Rules:
 """
     )
 
-    final_answer = response.content
+    final_answer = str(response.content)
 
     # ==================================================
     # CONFIDENCE SCORE
