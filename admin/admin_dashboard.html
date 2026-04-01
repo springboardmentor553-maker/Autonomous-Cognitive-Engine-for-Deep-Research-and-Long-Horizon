@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether | Admin Control Panel</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --primary: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.45);
+            --border: rgba(255, 255, 255, 0.6);
+            --text: #2e1065;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            background-color: #dcc8ff;
+            min-height: 100vh; color: var(--text); padding: 20px;
+            display: flex; flex-direction: column; gap: 20px; position: relative;
+            overflow-x: hidden;
+        }
+
+        .bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center; z-index: -2;
+            transition: opacity 2s ease-in-out; opacity: 0;
+        }
+        .bg-layer.active { opacity: 1; }
+        body::after {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(235, 220, 255, 0.55); backdrop-filter: blur(12px); z-index: -1;
+        }
+
+        .app-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--glass); padding: 12px 28px; border-radius: 20px;
+            border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0,0,0,0.05);
+        }
+        .logo-container { display: flex; align-items: center; gap: 12px; }
+        .aether-logo {
+            width: 42px; height: 42px; background: linear-gradient(135deg, #7c3aed, #4c1d95);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 16px rgba(124, 58, 237, 0.4);
+        }
+        .logo-text { font-size: 1.5rem; font-weight: 800; }
+        .admin-badge { background: var(--primary); color: white; padding: 8px 22px; border-radius: 50px; font-weight: 800; font-size: 0.8rem; }
+        .logout-btn { background: white; border: none; padding: 8px 22px; border-radius: 50px; font-weight: 700; color: var(--primary); cursor: pointer; transition: 0.3s; }
+        .logout-btn:hover { background: #f3f0ff; transform: scale(1.05); }
+
+        .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+        .glass-panel {
+            background: var(--glass); border-radius: 28px; border: 1px solid var(--border);
+            padding: 24px; backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+        }
+        .panel-heading { 
+            font-weight: 800; font-size: 1.2rem; margin-bottom: 20px; 
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .shiny-card {
+            background: rgba(255, 255, 255, 0.35); border: 1px solid var(--border);
+            border-radius: 22px; padding: 25px; text-align: center; position: relative; overflow: hidden; transition: 0.3s;
+        }
+        .shiny-card::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); transition: 0.8s;
+        }
+        .shiny-card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.5); }
+        .shiny-card:hover::after { left: 150%; }
+
+        .card-val { font-size: 2.2rem; font-weight: 800; display: block; color: var(--primary); }
+        .card-lab { font-size: 0.75rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .data-table thead {
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .data-table thead th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            transition: 0.2s;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .data-table tbody td {
+            padding: 12px 15px;
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            display: inline-block;
+        }
+
+        .badge-admin { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .badge-normal { background: rgba(124, 58, 237, 0.2); color: var(--primary); }
+        .badge-complete { background: #dcfce7; color: #166534; }
+        .badge-running { background: #fef9c3; color: #854d0e; }
+        .badge-error { background: #fee2e2; color: #991b1b; }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-refresh:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        .password-cell {
+            font-family: 'Courier New', monospace;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: #dc2626;
+            font-size: 0.8rem;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .table-container::-webkit-scrollbar { width: 6px; }
+        .table-container::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .warning-title {
+            font-weight: 800;
+            color: #dc2626;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .warning-text {
+            font-size: 0.8rem;
+            color: #991b1b;
+            line-height: 1.5;
+        }
+
+        .footer { 
+            text-align: center; 
+            padding: 30px; 
+            font-weight: 800; 
+            color: #5b21b6; 
+            opacity: 0.6; 
+            margin-top: auto;
+        }
+
+        @media (max-width: 1200px) {
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-layer active" style="background-image: url('https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&q=80&w=2000')"></div>
+    <div class="bg-layer" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=2000')"></div>
+
+    <header class="app-header">
+        <div class="logo-container">
+            <div class="aether-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="logo-text">DeepResearch AI Admin</span>
+        </div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <div class="admin-badge">Cluster Administrator</div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+        
+        <div class="glass-panel">
+            <div class="panel-heading">
+                <span>📊 Platform Statistics</span>
+                <button class="btn-refresh" onclick="loadAllData()">🔄 Refresh All</button>
+            </div>
+            <div class="metrics-grid">
+                <div class="shiny-card">
+                    <span class="card-val" id="totalUsers">0</span>
+                    <span class="card-lab">Total Users</span>
+                </div>
+                <div class="shiny-card">
+                    <span class="card-val" id="totalTasks">0</span>
+                    <span class="card-lab">Total Searches</span>
+                </div>
+                <div class="shiny-card">
+                    <span class="card-val" id="successRate">0%</span>
+                    <span class="card-lab">Success Rate</span>
+                </div>
+                <div class="shiny-card">
+                    <span class="card-val" id="completedTasks">0</span>
+                    <span class="card-lab">Completed</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <div class="panel-heading">
+                <span>👥 Registered Users</span>
+                <span style="font-size: 0.85rem; opacity: 0.7;" id="userCount">0 users</span>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Password</th>
+                            <th>Type</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 30px; opacity: 0.5;">
+                                Loading users...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="warning-box">
+                <div class="warning-title">⚠️ SECURITY WARNING</div>
+                <div class="warning-text">
+                    Displaying passwords in plain text is a <strong>severe security risk</strong>. 
+                    This feature is for <strong>EDUCATIONAL/DEMO PURPOSES ONLY</strong>. 
+                    Never implement this in a production environment.
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <div class="panel-heading">
+                <span>🔍 Search History (All Users)</span>
+                <span style="font-size: 0.85rem; opacity: 0.7;" id="taskCount">0 searches</span>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>User</th>
+                            <th>Search Query</th>
+                            <th>Status</th>
+                            <th>Files</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; opacity: 0.5;">
+                                Loading search history...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <div class="panel-heading">📈 Success Statistics</div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div class="shiny-card" style="padding: 20px;">
+                    <span class="card-val" style="color: #10b981; font-size: 1.8rem;" id="completeCount">0</span>
+                    <span class="card-lab">Successful</span>
+                </div>
+                <div class="shiny-card" style="padding: 20px;">
+                    <span class="card-val" style="color: #f59e0b; font-size: 1.8rem;" id="runningCount">0</span>
+                    <span class="card-lab">Running</span>
+                </div>
+                <div class="shiny-card" style="padding: 20px;">
+                    <span class="card-val" style="color: #ef4444; font-size: 1.8rem;" id="errorCount">0</span>
+                    <span class="card-lab">Failed</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="footer">© 2024 DeepResearch AI Lab • Admin Control Panel</footer>
+
+    <script>
+        // Background
+        const layers = document.querySelectorAll('.bg-layer');
+        let currentIdx = 0;
+        setInterval(() => {
+            layers[currentIdx].classList.remove('active');
+            currentIdx = (currentIdx + 1) % layers.length;
+            layers[currentIdx].classList.add('active');
+        }, 12000);
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+
+        // FIX: AUTO-LOAD + AUTO-REFRESH EVERY 5 SECONDS
+        window.onload = function() {
+            console.log('Admin dashboard loaded');
+            loadAllData();
+            
+            setInterval(() => {
+                loadAllData();
+                console.log('Auto-refreshed:', new Date().toLocaleTimeString());
+            }, 5000); // Refresh every 5 seconds
+        };
+
+        async function loadAllData() {
+            await loadStats();
+            await loadUsers();
+            await loadTasks();
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/admin/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalUsers').textContent = data.stats.total_users;
+                    document.getElementById('totalTasks').textContent = data.stats.total_tasks;
+                    document.getElementById('completedTasks').textContent = data.stats.completed_tasks;
+                    
+                    const successRate = data.stats.total_tasks > 0 
+                        ? ((data.stats.completed_tasks / data.stats.total_tasks) * 100).toFixed(1)
+                        : 0;
+                    document.getElementById('successRate').textContent = successRate + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayUsers(data.users);
+                    document.getElementById('userCount').textContent = data.total_count + ' users';
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function displayUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (!users || users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; opacity: 0.5;">
+                            No users found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td style="font-weight: 700; color: var(--primary);">${user.id}</td>
+                    <td style="font-weight: 700;">${user.username}</td>
+                    <td>${user.email}</td>
+                    <td><span class="password-cell">${user.password || '••••••••'}</span></td>
+                    <td>
+                        ${user.user_type === 'admin' 
+                            ? '<span class="badge badge-admin">ADMIN</span>' 
+                            : '<span class="badge badge-normal">Normal</span>'}
+                    </td>
+                    <td style="font-size: 0.75rem; opacity: 0.7;">
+                        ${new Date(user.created_at).toLocaleDateString()}
+                    </td>
+                    <td>
+                        ${user.user_type !== 'admin' 
+                            ? `<button class="btn-delete" onclick="deleteUser(${user.id}, '${user.username}')">🗑️ Delete</button>`
+                            : '<span style="opacity: 0.5; font-size: 0.75rem;">Protected</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteUser(userId, username) {
+            if (!confirm(`Delete user "${username}"?`)) return;
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`User "${username}" deleted`);
+                    loadAllData();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown'));
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+
+        async function loadTasks() {
+            try {
+                const response = await fetch('/api/admin/tasks');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayTasks(data.tasks);
+                    document.getElementById('taskCount').textContent = data.total_count + ' searches';
+                    
+                    const complete = data.tasks.filter(t => t.status === 'complete').length;
+                    const running = data.tasks.filter(t => t.status === 'running').length;
+                    const error = data.tasks.filter(t => t.status === 'error').length;
+                    
+                    document.getElementById('completeCount').textContent = complete;
+                    document.getElementById('runningCount').textContent = running;
+                    document.getElementById('errorCount').textContent = error;
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        function displayTasks(tasks) {
+            const tbody = document.getElementById('tasksTableBody');
+            
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 30px; opacity: 0.5;">
+                            No search history
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = tasks.map(task => {
+                let statusBadge = '';
+                if (task.status === 'complete') {
+                    statusBadge = '<span class="badge badge-complete">✓ COMPLETE</span>';
+                } else if (task.status === 'running') {
+                    statusBadge = '<span class="badge badge-running">• RUNNING</span>';
+                } else if (task.status === 'error') {
+                    statusBadge = '<span class="badge badge-error">✗ ERROR</span>';
+                } else {
+                    statusBadge = '<span class="badge" style="background: #e5e7eb; color: #6b7280;">PENDING</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td style="font-family: monospace; font-size: 0.75rem; color: var(--primary); font-weight: 700;">
+                            ${task.task_id}
+                        </td>
+                        <td style="font-weight: 600;">
+                            ${task.user_email || 'Unknown'}
+                        </td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${task.task_description}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align: center; font-weight: 700; color: var(--primary);">
+                            ${task.files_created || 0}
+                        </td>
+                        <td style="font-size: 0.75rem; opacity: 0.7;">
+                            ${new Date(task.created_at).toLocaleString()}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
