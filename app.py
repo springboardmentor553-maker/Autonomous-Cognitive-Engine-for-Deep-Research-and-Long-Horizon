@@ -36,6 +36,8 @@ if USE_MOCK_MODE:
     print("  3. Restart the application")
     print("\n" + "=" * 80 + "\n")
 else:
+
+    
     print(f"✓ API Key loaded: {ANTHROPIC_API_KEY[:8]}...{ANTHROPIC_API_KEY[-4:]}")
     os.environ['ANTHROPIC_API_KEY'] = ANTHROPIC_API_KEY
 
