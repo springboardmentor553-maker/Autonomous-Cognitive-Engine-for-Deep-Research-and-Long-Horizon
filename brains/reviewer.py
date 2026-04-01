@@ -1,62 +1,107 @@
-
 """
-Reviewer Agent - Enhanced Quality Assurance
+Researcher Agent - With Mock Mode (No API Key Required)
 """
-from langchain_core.tools import tool
-from langchain_groq import ChatGroq
+import os
+from brains.filetools import write_file
 
-def create_reviewer_agent():
-    """Create reviewer agent that ensures COMPREHENSIVE quality"""
-    from brains.filetools import read_file, write_file, edit_file
+# Check if mock mode
+USE_MOCK_MODE = os.getenv('ANTHROPIC_API_KEY') is None or os.getenv('USE_MOCK_MODE', 'false').lower() == 'true'
+
+if not USE_MOCK_MODE:
+    from langchain_anthropic import ChatAnthropic
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+def create_researcher():
+    """Create researcher agent with mock mode support"""
     
-    llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.5, max_tokens=800)  # Caps output ~600 words
-
-    tools = [read_file, write_file, edit_file]
-    llm_with_tools = llm.bind_tools(tools, strict=False)
+    if USE_MOCK_MODE:
+        print("⚠️ RESEARCHER: Running in MOCK MODE (no API calls)")
     
-    system_prompt = """You are a SENIOR EDITOR and QUALITY ASSURANCE SPECIALIST for professional research reports.
+    def researcher_node(state):
+        """Researcher agent node"""
+        user_task = state.get("user_task", "Research topic")
+        current_step = state.get("current_step", 1)
+        
+        print(f"[RESEARCHER] Processing step {current_step}")
+        
+        if USE_MOCK_MODE:
+            # Generate mock research content
+            content = f"""Research Report - Step {current_step}
+            
+Task: {user_task}
 
-═══════════════════════════════════════════════════════════════════════════════
-REVIEW CHECKLIST - ALL ITEMS MANDATORY:
-═══════════════════════════════════════════════════════════════════════════════
+MOCK RESEARCH FINDINGS:
 
-1. LENGTH VERIFICATION:
-   ✓ Report is 1000+ words (REJECT if shorter)
-   ✓ Each major section is 150+ words
-   ✓ Executive summary is 150-200 words
+This is simulated research content generated without API calls. In a real scenario, this would contain:
 
-2. CONTENT COMPLETENESS:
-   ✓ All research findings are included
-   ✓ At least 15 specific data points (numbers, percentages, dates)
-   ✓ Proper section structure with all required sections
-   ✓ Introduction, analysis, conclusions present
+1. **Background Information**
+   The topic "{user_task}" is an important area of study that has gained significant attention in recent years. Research shows that understanding this subject requires examining multiple perspectives and considering various factors.
 
-3. QUALITY STANDARDS:
-   ✓ Professional tone throughout
-   ✓ No grammatical errors or typos
-   ✓ Proper formatting with headers
-   ✓ Logical flow between sections
-   ✓ Sources and references included
+2. **Key Findings**
+   - Primary Factor: Recent studies indicate substantial growth and development in this area
+   - Secondary Consideration: Multiple stakeholders are involved in shaping outcomes
+   - Emerging Trends: New approaches are being developed to address challenges
+   - Data Points: Quantitative analysis suggests positive trajectory
 
-4. ENHANCEMENT REQUIREMENTS:
-   - If report is too short, ADD missing content
-   - If data is missing, ADD from research files
-   - If sections are weak, STRENGTHEN with analysis
-   - If structure is poor, REORGANIZE for clarity
+3. **Current State Analysis**
+   Current implementations demonstrate varying degrees of success. Best practices include systematic approaches, stakeholder engagement, and continuous evaluation. Organizations that adopt comprehensive strategies tend to achieve better results.
 
-═══════════════════════════════════════════════════════════════════════════════
-REVIEW PROCESS:
-═══════════════════════════════════════════════════════════════════════════════
+4. **Research Methodology**
+   This analysis draws from multiple sources including academic journals, industry reports, and expert interviews. The triangulation of data provides robust insights into the subject matter.
 
-Step 1: read_file("comprehensive_report_final.txt")
-Step 2: read_file(all research files to verify completeness)
-Step 3: Check against quality checklist
-Step 4: If ANY criterion fails, ENHANCE the report
-Step 5: write_file("final_reviewed_report.txt", <enhanced 1200+ word version>)
+5. **Implications**
+   The findings suggest that continued attention to this area will yield benefits. Stakeholders should consider both short-term actions and long-term strategic planning.
 
-CRITICAL: Never approve a report under 1000 words. Always enhance and expand.
-
-Your role is to transform good reports into EXCELLENT, publication-ready documents.
+Note: This is SIMULATED content for demonstration. Replace with real API calls when key is available.
+---
+Generated: Step {current_step} of 3
+Word Count: ~300
 """
+        else:
+            # Real API mode
+            llm = ChatAnthropic(
+                model="claude-sonnet-4-20250514",
+                temperature=0.7,
+                max_tokens=1500
+            )
+            
+            system_message = """You are a research agent. Your job is to gather information and create research content.
+
+For each research task:
+1. Analyze the topic thoroughly
+2. Generate detailed, factual content (300-400 words)
+3. Create a research file with your findings
+
+Keep your research focused and well-structured. Write in clear paragraphs."""
+
+            prompt = f"""Research Task: {user_task}
+
+Step {current_step} of 3: Provide detailed research findings.
+
+Generate 300-400 words of well-researched content on this topic."""
+            
+            messages = [
+                SystemMessage(content=system_message),
+                HumanMessage(content=prompt)
+            ]
+            
+            response = llm.invoke(messages)
+            content = response.content
+        
+        # Write research file
+        filename = f"research_step{current_step}.txt"
+        write_file(filename, content)
+        
+        print(f"[RESEARCHER] Created: {filename}")
+        
+        # Update state
+        created_files = state.get("created_files", [])
+        created_files.append(filename)
+        
+        return {
+            **state,
+            "created_files": created_files,
+            "messages": state.get("messages", [])
+        }
     
-    return llm_with_tools, system_prompt
+    return researcher_node
