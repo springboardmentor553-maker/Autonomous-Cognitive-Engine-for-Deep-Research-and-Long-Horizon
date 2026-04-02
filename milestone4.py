@@ -1,13 +1,14 @@
 """
 Milestone 4: Combined Planning + File Ops + Multi-Agent Collaboration
-- Milestone 1: 5-step TODO planning
-- Milestone 2: Virtual file system (read/write)
+- Milestone 1: 5-step TODO planning with descriptive step names
+- Milestone 2: Virtual file system with meaningful filenames
 - Milestone 3: Supervisor → Researcher → Writer → Reviewer delegation
 No UI — runs from terminal.
 """
 import os
 import sys
 import time
+import re
 from pathlib import Path
 from datetime import datetime
 from langchain_core.messages import HumanMessage
@@ -22,10 +23,44 @@ OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL",    "llama3.2:1b")
 FS_DIR = Path("virtual_fs")
 FS_DIR.mkdir(exist_ok=True)
 
+def _slug(text: str) -> str:
+    """Pick the most topic-specific word from the task as a filename prefix.
+    Skips all generic/filler/verb words and picks the longest remaining word
+    — which is almost always the actual subject/topic."""
+    stopwords = {
+        # articles, prepositions, conjunctions
+        "the","a","an","of","in","on","at","to","for","and","or","but","nor",
+        "with","about","into","onto","from","by","as","its","it","this","that",
+        # common task verbs
+        "use","using","used","uses","explain","explains","explained",
+        "describe","describes","described","analyze","analyzes","analysed",
+        "analyse","create","creates","created","make","makes","made",
+        "write","writes","written","give","gives","given","tell","tells",
+        "show","shows","find","finds","found","get","gets","do","does","did",
+        "build","builds","built","compare","compares","compared","define",
+        "generate","report","research","study","review","overview","summary",
+        "comprehensive","detailed","brief","simple","basic","advanced",
+        # question words
+        "how","what","why","when","which","who","where","is","are","was",
+        "were","be","been","being","can","will","would","should","could",
+        # generic nouns that add no topic info
+        "impact","effect","role","use","usage","application","system",
+        "model","models","approach","method","methods","process","topic",
+        "information","data","results","output","plan","list","ideas",
+        "fundamentals","basics","concepts","principles","introduction","guide",
+    }
+    words = re.sub(r"[^a-z0-9 ]", "", text.lower()).split()
+    candidates = [w for w in words if w not in stopwords and len(w) > 3]
+    if not candidates:
+        candidates = [w for w in words if len(w) > 2]
+    # Pick the longest candidate — longest word is usually the most specific topic noun
+    best = max(candidates, key=len) if candidates else "research"
+    return best[:20]
+
 def fs_write(filename, content):
     (FS_DIR / filename).write_text(content, encoding="utf-8")
     size = len(content)
-    print(f"    📄 Saved: {filename} ({size} bytes)")
+    print(f"    📄 Saved  → virtual_fs/{filename}  ({size} bytes)")
 
 def fs_read(filename):
     p = FS_DIR / filename
@@ -55,14 +90,14 @@ def log_delegation(from_agent, to_agent, task):
         "task":  task
     }
     delegation_log.append(entry)
-    print(f"\n  {'─'*60}")
+    print(f"\n  {'─'*62}")
     print(f"  🔀 DELEGATION  [{entry['time']}]")
     print(f"     FROM : {from_agent.upper()}")
     print(f"     TO   : {to_agent.upper()}")
     print(f"     TASK : {task}")
-    print(f"  {'─'*60}")
+    print(f"  {'─'*62}")
 
-# ── Agents ─────────────────────────────────────────────────────────────────────
+# ── LLM factory ───────────────────────────────────────────────────────────────
 from langchain_ollama import ChatOllama
 from langchain_core.messages import SystemMessage
 
@@ -77,174 +112,237 @@ def make_llm(temperature=0.7, num_predict=300):
 # ── SUPERVISOR ─────────────────────────────────────────────────────────────────
 def supervisor(user_task):
     print(f"\n{'═'*65}")
-    print(f"  🛡️  SUPERVISOR  — Planning workflow")
+    print("  🛡️  SUPERVISOR  — Orchestrating the full research workflow")
     print(f"{'═'*65}")
+
+    slug = _slug(user_task)
+
+    # Build meaningful filenames up front so every agent uses the same names
+    filenames = {
+        "phase1":  f"{slug}_background.txt",
+        "phase2":  f"{slug}_findings.txt",
+        "phase3":  f"{slug}_outlook.txt",
+        "report":  f"{slug}_final_report.txt",
+        "review":  f"{slug}_review.txt",
+        "todos":   f"{slug}_todo_list.txt",
+    }
 
     todos = [
-        {"id": 1, "description": f"Research phase 1: background on '{user_task[:50]}'", "status": "pending"},
-        {"id": 2, "description": f"Research phase 2: key findings on '{user_task[:50]}'", "status": "pending"},
-        {"id": 3, "description": f"Research phase 3: trends/outlook on '{user_task[:50]}'", "status": "pending"},
-        {"id": 4, "description": "Write comprehensive report from all research findings", "status": "pending"},
-        {"id": 5, "description": "Review and validate the final report for quality",      "status": "pending"},
+        {"id": 1, "step": "Background Research",
+         "description": f"Gather background context and foundational knowledge on '{user_task[:50]}'",
+         "output": filenames["phase1"], "status": "pending"},
+        {"id": 2, "step": "Key Findings",
+         "description": f"Identify and document the most important findings and data points on '{user_task[:50]}'",
+         "output": filenames["phase2"], "status": "pending"},
+        {"id": 3, "step": "Trends & Outlook",
+         "description": f"Analyse current trends, future directions, and strategic implications of '{user_task[:50]}'",
+         "output": filenames["phase3"], "status": "pending"},
+        {"id": 4, "step": "Report Writing",
+         "description": "Synthesise all three research phases into a structured, professional final report",
+         "output": filenames["report"], "status": "pending"},
+        {"id": 5, "step": "Quality Review",
+         "description": "Review the final report for accuracy, clarity, completeness, and logical structure",
+         "output": filenames["review"], "status": "pending"},
     ]
 
-    print(f"\n  📋 TODO LIST — 5 steps created:")
+    print("\n  📋 TODO LIST — 5 steps planned:")
     for t in todos:
-        print(f"     [{t['id']}] {t['description']}")
+        print(f"     [{t['id']}] {t['step']:<20}  →  {t['output']}")
+        print(f"          {t['description']}")
 
-    fs_write("todo_list.txt",
-             "\n".join(f"[{t['id']}] {t['description']}" for t in todos))
+    todo_text = "\n".join(
+        f"[{t['id']}] {t['step']}\n    Task   : {t['description']}\n    Output : {t['output']}"
+        for t in todos
+    )
+    fs_write(filenames["todos"], todo_text)
 
-    # Delegate all tasks
-    log_delegation("Supervisor", "Researcher", "Research phases 1, 2 & 3")
-    researcher(user_task)
+    # ── Delegate to Researcher
+    log_delegation("Supervisor", "Researcher",
+                   "Produce background, findings, and outlook files (3 phases in one pass)")
+    researcher(user_task, filenames)
+    todos[0]["status"] = todos[1]["status"] = todos[2]["status"] = "done"
 
-    todos[0]["status"] = "done"
-    todos[1]["status"] = "done"
-    todos[2]["status"] = "done"
-
-    log_delegation("Supervisor", "Writer", "Write final report")
-    writer(user_task)
+    # ── Delegate to Writer
+    log_delegation("Supervisor", "Writer",
+                   "Read all research files and compose the final structured report")
+    writer(user_task, filenames)
     todos[3]["status"] = "done"
 
-    log_delegation("Supervisor", "Reviewer", "Review final report")
-    reviewer()
+    # ── Delegate to Reviewer
+    log_delegation("Supervisor", "Reviewer",
+                   "Evaluate the final report and return a quality verdict")
+    reviewer(filenames)
     todos[4]["status"] = "done"
 
-    # Mark todos complete
-    fs_write("todo_list.txt",
-             "\n".join(f"[✓] {t['description']}" for t in todos))
+    # Update todo file to mark all done
+    todo_done = "\n".join(
+        f"[✓] {t['step']}\n    Task   : {t['description']}\n    Output : {t['output']}"
+        for t in todos
+    )
+    fs_write(filenames["todos"], todo_done)
 
-    return todos
+    return todos, filenames
 
 # ── RESEARCHER ─────────────────────────────────────────────────────────────────
-def researcher(user_task):
+def researcher(user_task, filenames):
     print(f"\n{'═'*65}")
-    print(f"  🔬 RESEARCHER  — Gathering information (1 LLM call → 3 files)")
+    print("  🔬 RESEARCHER  — Gathering information across 3 research phases")
+    print("  Strategy : Single LLM call → split into 3 named output files")
     print(f"{'═'*65}")
 
-    llm = make_llm(temperature=0.7, num_predict=300)
+    llm = make_llm(temperature=0.7, num_predict=350)
 
     response = llm.invoke([
-        SystemMessage(content="You are a research agent. Write concise factual findings. Be brief."),
+        SystemMessage(content=(
+            "You are a research agent. Write concise, factual, well-structured findings. "
+            "Each phase must be clearly labelled and contain 3-4 sentences."
+        )),
         HumanMessage(content=(
-            f"Research: {user_task}\n"
-            "Write 3 short sections:\n"
-            "PHASE1: (background, 2 sentences)\n"
-            "PHASE2: (key findings, 2 sentences)\n"
-            "PHASE3: (trends/outlook, 2 sentences)"
+            f"Research topic: {user_task}\n\n"
+            "Respond using exactly these three labelled sections:\n"
+            "PHASE1: (background — what this topic is, its origin, and why it matters)\n"
+            "PHASE2: (key findings — the most important facts, data points, and insights)\n"
+            "PHASE3: (trends & outlook — current direction, future implications, emerging developments)"
         ))
     ])
 
     full = response.content
-    phases = {"PHASE1:": "", "PHASE2:": "", "PHASE3:": ""}
+
+    # Parse phases from LLM output
+    phases = {"PHASE1:": [], "PHASE2:": [], "PHASE3:": []}
     current_key = None
     for line in full.splitlines():
+        matched = False
         for key in phases:
-            if line.strip().startswith(key):
+            if line.strip().upper().startswith(key):
                 current_key = key
-                phases[key] += line + "\n"
+                phases[key].append(line)
+                matched = True
                 break
-        else:
-            if current_key:
-                phases[current_key] += line + "\n"
+        if not matched and current_key:
+            phases[current_key].append(line)
 
-    for i, key in enumerate(["PHASE1:", "PHASE2:", "PHASE3:"], 1):
-        text = phases[key].strip() or f"Research phase {i} for: {user_task}"
-        fs_write(f"research_step{i}.txt", text)
+    mapping = {
+        "PHASE1:": filenames["phase1"],
+        "PHASE2:": filenames["phase2"],
+        "PHASE3:": filenames["phase3"],
+    }
+    labels = {
+        "PHASE1:": "Background Research",
+        "PHASE2:": "Key Findings",
+        "PHASE3:": "Trends & Outlook",
+    }
 
-    print(f"  ✓ Research complete — 3 files written to virtual_fs/")
+    for key, fname in mapping.items():
+        text = "\n".join(phases[key]).strip()
+        if not text:
+            text = f"{labels[key]} for: {user_task}\n(Content not separately parsed — see full research output.)"
+        fs_write(fname, text)
+
+    print("\n  ✓ Research complete — 3 files written to virtual_fs/")
 
 # ── WRITER ─────────────────────────────────────────────────────────────────────
-def writer(user_task):
+def writer(user_task, filenames):
     print(f"\n{'═'*65}")
-    print(f"  ✍️  WRITER     — Reading research files & writing report")
+    print("  ✍️  WRITER     — Reading research files and composing final report")
+    print("  Strategy : Reads all 3 research files → produces 1 structured report")
     print(f"{'═'*65}")
 
-    research_files = sorted([f for f in fs_list() if f.startswith("research_")])
     research_content = ""
-    for fname in research_files:
-        print(f"     📖 Reading: {fname}")
-        research_content += fs_read(fname)[:200] + "\n"
+    for key in ["phase1", "phase2", "phase3"]:
+        fname = filenames[key]
+        print(f"     📖 Reading : {fname}")
+        research_content += f"\n[{fname}]\n" + fs_read(fname)[:220] + "\n"
 
-    llm = make_llm(temperature=0.7, num_predict=350)
+    llm = make_llm(temperature=0.7, num_predict=400)
     response = llm.invoke([
-        SystemMessage(content="You are a professional writer. Write a concise structured report."),
+        SystemMessage(content=(
+            "You are a professional report writer. Produce a clear, well-structured report. "
+            "Use concise language. Every section should add value."
+        )),
         HumanMessage(content=(
-            f"Task: {user_task}\n\nResearch:\n{research_content}\n\n"
-            "Write: Title, Introduction (2 sentences), Findings (3 bullets), Conclusion (1 sentence)."
+            f"Task: {user_task}\n\n"
+            f"Research material:\n{research_content}\n\n"
+            "Write a professional report with:\n"
+            "- Title\n"
+            "- Introduction (2 sentences)\n"
+            "- Key Findings (3 bullet points)\n"
+            "- Analysis (2 sentences connecting the findings)\n"
+            "- Conclusion (1 sentence with a forward-looking statement)"
         ))
     ])
 
-    fs_write("final_report.txt", response.content)
-    print(f"  ✓ Report written to virtual_fs/final_report.txt")
+    fs_write(filenames["report"], response.content)
+    print(f"\n  ✓ Final report written → {filenames['report']}")
 
 # ── REVIEWER ───────────────────────────────────────────────────────────────────
-def reviewer():
+def reviewer(filenames):
     print(f"\n{'═'*65}")
-    print(f"  🔍 REVIEWER   — Reviewing final report")
+    print("  🔍 REVIEWER   — Evaluating the final report for quality assurance")
+    print("  Strategy : Reads final report → returns structured verdict")
     print(f"{'═'*65}")
 
-    report = fs_read("final_report.txt")[:400]
-    print(f"     📖 Reading: final_report.txt")
+    report_fname = filenames["report"]
+    print(f"     📖 Reading : {report_fname}")
+    report = fs_read(report_fname)[:500]
 
-    llm = make_llm(temperature=0.3, num_predict=120)
+    llm = make_llm(temperature=0.3, num_predict=150)
     response = llm.invoke([
-        SystemMessage(content="You are a quality reviewer. Give 2-sentence feedback. End with Verdict: Approved or Verdict: Needs Revision."),
-        HumanMessage(content=f"Review:\n{report}")
+        SystemMessage(content=(
+            "You are a quality reviewer. Assess the report on completeness, clarity, and structure. "
+            "Give 3 short sentences of feedback. End with exactly: Verdict: Approved  or  Verdict: Needs Revision"
+        )),
+        HumanMessage(content=f"Review this report:\n\n{report}")
     ])
 
-    fs_write("review.txt", response.content)
-    print(f"  ✓ Review written to virtual_fs/review.txt")
+    fs_write(filenames["review"], response.content)
+    print(f"\n  ✓ Review written → {filenames['review']}")
 
 # ── MAIN ───────────────────────────────────────────────────────────────────────
 def run(user_task: str):
     start = time.time()
 
     print(f"\n{'═'*65}")
-    print(f"  🚀 MILESTONE 4 — Multi-Agent Research Pipeline")
-    print(f"  Model : {OLLAMA_MODEL}")
-    print(f"  Task  : {user_task[:60]}")
+    print("🚀 MILESTONE 4 — Multi-Agent Research Pipeline")
+    print(f"  Model  : {OLLAMA_MODEL}")
+    print(f"  Task   : {user_task[:60]}")
+    print(f"  FS Dir : {FS_DIR.absolute()}")
     print(f"{'═'*65}")
 
-    # Clear previous run
     fs_clear()
     delegation_log.clear()
 
-    # Run pipeline
-    todos = supervisor(user_task)
+    todos, filenames = supervisor(user_task)
 
     elapsed = time.time() - start
+    stats   = fs_stats()
 
     # ── Final Summary ──────────────────────────────────────────────────────────
-    stats = fs_stats()
-
     print(f"\n{'═'*65}")
-    print(f"  ✅ COMPLETE  ({elapsed:.1f}s)")
+    print(f"  ✅ PIPELINE COMPLETE  ({elapsed:.1f}s)")
     print(f"{'═'*65}")
 
-    print(f"\n  📋 TODO STATUS:")
+    print("\n  📋 TODO STATUS — all 5 steps completed:")
     for t in todos:
-        print(f"     [✓] {t['description']}")
+        print(f"     [✓] Step {t['id']}: {t['step']:<20}  →  {t['output']}")
 
-    print(f"\n  📁 VIRTUAL FILE SYSTEM  ({stats['count']} files, {stats['total_bytes']} bytes):")
+    print(f"\n  📁 VIRTUAL FILE SYSTEM  ({stats['count']} files · {stats['total_bytes']} bytes total):")
     for fname in stats["files"]:
         size = (FS_DIR / fname).stat().st_size
-        print(f"     • {fname:<30} {size} bytes")
+        print(f"     • {fname:<45} {size:>6} bytes")
 
-    print(f"\n  🔀 DELEGATION LOG  ({len(delegation_log)} events):")
+    print(f"\n  🔀 DELEGATION LOG  ({len(delegation_log)} delegation events):")
     for d in delegation_log:
-        print(f"     [{d['time']}] {d['from']} → {d['to']}  |  {d['task']}")
+        print(f"     [{d['time']}]  {d['from']:<12} →  {d['to']:<12}  |  {d['task']}")
 
-    print(f"\n  📄 FINAL REPORT PREVIEW:")
-    report = fs_read("final_report.txt")
-    preview = report[:600] + ("..." if len(report) > 600 else "")
+    print(f"\n  📄 FINAL REPORT  ({filenames['report']}):")
+    report = fs_read(filenames["report"])
+    preview = report[:700] + ("..." if len(report) > 700 else "")
     for line in preview.splitlines():
         print(f"     {line}")
 
-    print(f"\n  📝 REVIEW:")
-    review = fs_read("review.txt")
-    for line in review.splitlines():
+    print(f"\n  📝 REVIEW  ({filenames['review']}):")
+    for line in fs_read(filenames["review"]).splitlines():
         print(f"     {line}")
 
     print(f"\n{'═'*65}\n")
