@@ -1,6 +1,7 @@
 """
 tools.py - Combined Tool Registry for Deep Cognitive Task Framework
-Milestone 3: Planning tools (M1) + Virtual File System tools (M2) + Delegation tools (M3)
+Milestone 4: Planning tools (M1) + VFS tools (M2) + Delegation tools (M3)
+Updated: write_todos now accepts 3–5 tasks (spec allows up to 5).
 """
 
 import json
@@ -23,12 +24,17 @@ def write_todos(tasks: list[str]) -> str:
     Each task should be a clear, actionable step toward the overall goal.
 
     Args:
-        tasks: List of EXACTLY 5 task descriptions. Each must start with one of:
+        tasks: List of 3 to 5 task descriptions. Each must start with one of:
                RESEARCH / ANALYZE / SYNTHESIZE / DRAFT / REVIEW
 
     Returns:
         JSON with the created TODO list including IDs and statuses.
     """
+    if not (3 <= len(tasks) <= 5):
+        return json.dumps({
+            "success": False,
+            "error": f"You must provide between 3 and 5 tasks. Got {len(tasks)}."
+        })
     todos = []
     for task_desc in tasks:
         todo: TodoItem = {

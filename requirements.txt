@@ -1,8 +1,9 @@
-# Deep Cognitive Task Framework — Milestones 1-3
-# All milestones share the same dependency set.
+# Deep Cognitive Task Framework — All Milestones
+# Switched from Google Gemini → Groq (Milestone 4 / Web UI)
 langgraph>=0.2.0
 langchain>=0.3.0
 langchain-core>=0.3.0
-langchain-google-genai>=2.0.0
+langchain-groq>=0.1.0
+streamlit>=1.35.0
 python-dotenv>=1.0.0
 typing-extensions>=4.0.0

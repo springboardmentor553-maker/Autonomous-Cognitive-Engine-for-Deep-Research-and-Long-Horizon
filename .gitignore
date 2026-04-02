@@ -1,32 +1,56 @@
-# Environment & secrets
+# ----------------------
+# Environment & Secrets
+# ----------------------
 .env
+.env.*
 *.env
 
+# ----------------------
 # Python
+# ----------------------
 __pycache__/
 *.py[cod]
 *.pyo
-.venv/
-venv/
-env/
+*.pyc
 *.egg-info/
 dist/
 build/
 
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# ----------------------
 # VS Code
+# ----------------------
 .vscode/
 
-# Output files
-generated_todos.json
+# ----------------------
+# OS Files
+# ----------------------
+.DS_Store
 
-# uv
+# ----------------------
+# Project Output Files
+# ----------------------
+generated_todos.json
+milestone2_output.json
+milestone2_eval_results.json
+milestone3_eval_results.json
+milestone4_output.json
+check_output.txt
+
+# ----------------------
+# Misc
+# ----------------------
 .python-version
 uv.lock
 
-.env
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-milestone2_output.json
-milestone2_eval_results.json
+# ----------------------
+# Optional (if needed)
+# ----------------------
+list_models.py
+rate_limit.py
+#__init__.py
+.venv_old/
