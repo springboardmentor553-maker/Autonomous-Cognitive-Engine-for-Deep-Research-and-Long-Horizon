@@ -187,7 +187,7 @@ if __name__ == "__main__":
     print("Milestone 4: Full Autonomous System")
     print("=" * 70)
 
-    task = "Summarize how a recommendation system works and list its key components"
+    task = "summarize how a recommendation system works and list its key components"
 
     result = run_full_agent(task)
 

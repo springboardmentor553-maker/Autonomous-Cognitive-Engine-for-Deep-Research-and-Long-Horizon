@@ -52,13 +52,17 @@ def execute_step(state: ExecutionState) -> ExecutionState:
         try:
 
             # ==================================================
-            # SUPERVISOR DECISION LOGIC
+            # SMART SUPERVISOR DECISION LOGIC (FINAL FIX)
             # ==================================================
 
             task_lower = step_task.lower()
 
-            if any(word in task_lower for word in ["summarize", "summary", "analyze", "overview", "conclude"]):
-                
+            # Delegate if task is complex OR requires explanation/summarization
+            if any(word in task_lower for word in [
+                "summarize", "summary", "analyze", "overview",
+                "conclude", "explain", "outline", "describe"
+            ]) or len(step_task.split()) > 8:
+
                 print("[SUPERVISOR] Delegating to Summarization Agent")
 
                 output = delegate_task.invoke({
@@ -79,14 +83,16 @@ def execute_step(state: ExecutionState) -> ExecutionState:
                 response = llm.invoke(step_task)
                 output = response.content
 
-           
+            # ==================================================
             # QUALITY CHECK
-           
+            # ==================================================
 
             if len(str(output).split()) < 20:
                 output += "\n\n[Notice: Output may be too brief]"
 
+            # ==================================================
             # STORE OUTPUT
+            # ==================================================
 
             state["step_outputs"].append(str(output))
 
@@ -113,6 +119,7 @@ def execute_step(state: ExecutionState) -> ExecutionState:
 
             state["execution_count"] += 1
             state["current_step"] += 1
+            state["todos"][step_index]["status"] = "done"
 
             end_time = time.time()
             print(f"[STEP COMPLETED] Time Taken: {round(end_time - start_time, 2)} sec")
