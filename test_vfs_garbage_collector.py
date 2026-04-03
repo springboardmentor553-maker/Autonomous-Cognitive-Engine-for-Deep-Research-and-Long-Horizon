@@ -1,5 +1,5 @@
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 import random
 import json
 from typing import TypedDict, Dict
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     print(f"INNOVATION: VFS GARBAGE COLLECTOR & ACTIVE MEMORY PRUNING")
     print(f"============================================================\n")
     
-    initial_state = {
+    initial_state: GCState = {
         "objective": "Build a secure AI-driven drug discovery pipeline.",
         "vfs": {},
         "memory_usage_bytes": 0,

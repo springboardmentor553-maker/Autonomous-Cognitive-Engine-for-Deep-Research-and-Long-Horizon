@@ -5,7 +5,7 @@ Any developer can create an agent elsewhere, import `agent_registry`, and regist
 """
 
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 from typing import Callable, Dict, Any
 
 class SubAgentRegistry:

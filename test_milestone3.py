@@ -1,5 +1,5 @@
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 import json
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, START, END
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     print("-------------------------------------------------------------")
     
     for idx, case in enumerate(mock_cases, 1):
-        initial_state = {
+        initial_state: DelegationState = {
             "vfs": {}, 
             "todos": case["todos"],
             "messages": [], 

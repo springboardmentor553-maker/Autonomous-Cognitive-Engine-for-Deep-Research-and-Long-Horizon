@@ -1,5 +1,5 @@
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
 import os
 import json
 import random
@@ -168,7 +168,7 @@ if __name__ == "__main__":
         ]
     }
 
-    initial_state = {
+    initial_state: MainState = {
         "vfs": {}, 
         "todos": test_case["todos"],
         "global_context": [],
