@@ -181,7 +181,5 @@ All settings live in `config/settings.py` and are read from environment variable
 | `LANGCHAIN_API_KEY` | *(optional)* | LangSmith key |
 
 ---
-
 ## License
-
 MIT
