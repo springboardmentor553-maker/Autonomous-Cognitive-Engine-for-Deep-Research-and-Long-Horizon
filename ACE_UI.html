@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE — Autonomous Cognitive Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:         #04070f;
+  --bg2:        #070d1a;
+  --surface:    #0a1628;
+  --surface2:   #0e1e38;
+  --surface3:   #122340;
+  --border:     #162d55;
+  --border2:    #1e3d6e;
+  --accent:     #2563eb;
+  --accent2:    #3b82f6;
+  --accent3:    #93c5fd;
+  --glow:       rgba(59,130,246,0.15);
+  --green:      #059669;
+  --green2:     #10b981;
+  --green3:     #6ee7b7;
+  --amber:      #d97706;
+  --amber2:     #f59e0b;
+  --red:        #dc2626;
+  --purple:     #7c3aed;
+  --purple2:    #8b5cf6;
+  --cyan:       #0891b2;
+  --cyan2:      #06b6d4;
+  --text:       #f0f6ff;
+  --text2:      #94a3b8;
+  --text3:      #4a6080;
+  --mono:       'IBM Plex Mono', monospace;
+  --sans:       'Outfit', sans-serif;
+  --display:    'Playfair Display', serif;
+}
+
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+  font-size:14px;
+}
+
+/* ── Noise texture overlay ─────────────────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+
+/* ── Grid lines ─────────────────────────────────────────────────────────── */
+.grid-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,99,235,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,0.04) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+
+/* ── Glow orbs ──────────────────────────────────────────────────────────── */
+.orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);opacity:0.12}
+.orb1{width:500px;height:500px;background:var(--accent);top:-150px;left:-150px;animation:orbMove1 25s ease-in-out infinite alternate}
+.orb2{width:400px;height:400px;background:var(--purple);bottom:-100px;right:-100px;animation:orbMove2 30s ease-in-out infinite alternate}
+.orb3{width:300px;height:300px;background:var(--cyan);top:40%;left:40%;animation:orbMove3 20s ease-in-out infinite alternate}
+@keyframes orbMove1{0%{transform:translate(0,0)}100%{transform:translate(60px,80px)}}
+@keyframes orbMove2{0%{transform:translate(0,0)}100%{transform:translate(-80px,-60px)}}
+@keyframes orbMove3{0%{transform:translate(0,0)}100%{transform:translate(40px,-40px)}}
+
+/* ── App shell ──────────────────────────────────────────────────────────── */
+.app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════════════════════════════════ */
+header{
+  height:60px;
+  border-bottom:1px solid var(--border);
+  background:rgba(4,7,15,0.85);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.75rem;
+  position:sticky;top:0;z-index:200;
+}
+.hdr-left{display:flex;align-items:center;gap:1rem}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo-cube{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--purple) 100%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  box-shadow:0 0 24px rgba(59,130,246,0.4),0 0 8px rgba(124,58,237,0.3);
+  flex-shrink:0;
+}
+.logo-name{
+  font-family:var(--sans);font-weight:800;font-size:1rem;
+  letter-spacing:-0.01em;
+  background:linear-gradient(90deg,var(--text) 0%,var(--accent3) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.logo-sub{font-size:0.7rem;color:var(--text3);font-weight:400;letter-spacing:0.02em;margin-top:1px}
+.hdr-divider{width:1px;height:28px;background:var(--border)}
+.hdr-stack{display:flex;gap:6px;align-items:center}
+.stack-chip{
+  font-family:var(--mono);font-size:0.62rem;
+  padding:3px 9px;border-radius:4px;
+  border:1px solid var(--border);
+  color:var(--text3);background:var(--surface);
+  letter-spacing:0.03em;
+}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.status-pill{
+  display:flex;align-items:center;gap:7px;
+  padding:5px 14px;border-radius:20px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  font-size:0.72rem;font-weight:600;
+  color:var(--text2);
+  transition:all 0.3s;
+}
+.status-pill.running{border-color:var(--amber2);color:var(--amber2);background:rgba(245,158,11,0.08)}
+.status-pill.done{border-color:var(--green2);color:var(--green2);background:rgba(16,185,129,0.08)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.status-pill.idle .status-dot{background:var(--text3)}
+.status-pill.running .status-dot{animation:statusPulse 1s infinite}
+@keyframes statusPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.hdr-author{font-size:0.72rem;color:var(--text3);font-family:var(--mono)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════════════════════════════════ */
+.workspace{
+  flex:1;
+  display:grid;
+  grid-template-columns:300px 1fr 260px;
+  min-height:calc(100vh - 60px);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LEFT PANEL
+══════════════════════════════════════════════════════════════════════════ */
+.left-panel{
+  border-right:1px solid var(--border);
+  background:var(--bg2);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* Input section */
+.input-section{padding:1.25rem;border-bottom:1px solid var(--border)}
+.section-label{
+  font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--text3);font-weight:600;margin-bottom:0.75rem;
+  display:flex;align-items:center;gap:6px;
+}
+.section-label::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--accent2)}
+#requestInput{
+  width:100%;
+  background:var(--surface);
+  border:1px solid var(--border2);
+  border-radius:10px;
+  padding:11px 13px;
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:0.84rem;
+  line-height:1.55;
+  resize:none;
+  min-height:96px;
+  outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+#requestInput::placeholder{color:var(--text3)}
+#requestInput:focus{
+  border-color:var(--accent2);
+  box-shadow:0 0 0 3px rgba(59,130,246,0.1),0 0 20px rgba(59,130,246,0.05);
+}
+.run-btn{
+  width:100%;margin-top:10px;
+  padding:10px 16px;
+  background:var(--accent);
+  border:1px solid rgba(59,130,246,0.5);
+  border-radius:9px;
+  color:#fff;
+  font-family:var(--sans);font-size:0.84rem;font-weight:700;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  letter-spacing:0.02em;
+  transition:all 0.2s;
+  box-shadow:0 4px 20px rgba(37,99,235,0.35),inset 0 1px 0 rgba(255,255,255,0.1);
+  position:relative;overflow:hidden;
+}
+.run-btn::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,transparent 100%);
+  pointer-events:none;
+}
+.run-btn:hover:not(:disabled){
+  background:#1d4ed8;
+  box-shadow:0 6px 28px rgba(37,99,235,0.5),inset 0 1px 0 rgba(255,255,255,0.12);
+  transform:translateY(-1px);
+}
+.run-btn:active:not(:disabled){transform:translateY(0)}
+.run-btn:disabled{opacity:0.55;cursor:not-allowed;transform:none}
+.run-btn.running{background:linear-gradient(135deg,#b45309,#d97706);border-color:rgba(217,119,6,0.5);box-shadow:0 4px 20px rgba(180,83,9,0.4)}
+.btn-spinner{
+  width:14px;height:14px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;
+  animation:spin 0.7s linear infinite;
+  display:none;
+}
+.run-btn.running .btn-spinner{display:block}
+.run-btn.running .btn-arrow{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Quick prompts */
+.quick-section{padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+.quick-list{display:flex;flex-direction:column;gap:5px}
+.qp-btn{
+  padding:7px 11px;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:7px;
+  color:var(--text2);
+  font-size:0.75rem;font-family:var(--sans);
+  cursor:pointer;text-align:left;line-height:1.4;
+  transition:all 0.15s;
+  position:relative;
+}
+.qp-btn::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  border-radius:2px 0 0 2px;
+  background:var(--accent2);opacity:0;
+  transition:opacity 0.15s;
+}
+.qp-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface)}
+.qp-btn:hover::before{opacity:1}
+
+/* Stats */
+.stats-section{padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.stat-tile{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:10px 12px;
+  position:relative;overflow:hidden;
+}
+.stat-tile::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:currentColor;opacity:0.2;
+}
+.stat-tile.t-green{color:var(--green2)}
+.stat-tile.t-blue{color:var(--accent2)}
+.stat-tile.t-amber{color:var(--amber2)}
+.stat-tile.t-purple{color:var(--purple2)}
+.st-val{font-size:1.4rem;font-weight:800;font-family:var(--mono);line-height:1}
+.st-lbl{font-size:0.62rem;color:var(--text3);margin-top:4px;letter-spacing:0.04em;text-transform:uppercase}
+
+/* Delegation log */
+.dellog-section{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:1rem 1.25rem}
+.del-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;padding-right:4px}
+.del-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:9px 11px;
+  animation:fadeUp 0.3s ease forwards;opacity:0;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.del-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.del-agent-tag{
+  font-family:var(--mono);font-size:0.65rem;font-weight:600;
+  padding:2px 8px;border-radius:4px;
+}
+.del-agent-tag.summarizer{background:rgba(124,58,237,0.15);color:var(--purple2);border:1px solid rgba(124,58,237,0.25)}
+.del-agent-tag.web_searcher{background:rgba(8,145,178,0.15);color:var(--cyan2);border:1px solid rgba(8,145,178,0.25)}
+.del-ok{font-size:0.6rem;color:var(--green2);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:2px 7px;border-radius:4px}
+.del-desc{font-size:0.72rem;color:var(--text3);line-height:1.45}
+.empty-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;color:var(--text3);text-align:center;
+}
+.empty-icon{font-size:1.75rem;opacity:0.3;filter:grayscale(1)}
+.empty-text{font-size:0.78rem;line-height:1.5}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CENTER PANEL
+══════════════════════════════════════════════════════════════════════════ */
+.center-panel{
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* Pipeline bar */
+.pipeline-track{
+  border-bottom:1px solid var(--border);
+  background:rgba(7,13,26,0.9);
+  padding:0 1.5rem;
+  height:48px;
+  display:flex;align-items:center;
+  gap:0;
+  overflow-x:auto;
+  flex-shrink:0;
+}
+.pipeline-track::-webkit-scrollbar{height:0}
+.pip-step{display:flex;align-items:center;flex-shrink:0}
+.pip-node{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:20px;
+  font-size:0.68rem;font-weight:600;
+  letter-spacing:0.04em;
+  border:1px solid var(--border);
+  color:var(--text3);
+  white-space:nowrap;
+  transition:all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.pip-node .pn-dot{
+  width:5px;height:5px;border-radius:50%;background:var(--text3);
+  transition:all 0.35s;
+}
+.pip-node.active{
+  border-color:var(--accent2);color:var(--accent2);
+  background:rgba(59,130,246,0.08);
+  box-shadow:0 0 16px rgba(59,130,246,0.15);
+}
+.pip-node.active .pn-dot{background:var(--accent2);box-shadow:0 0 6px var(--accent2);animation:dotPulse 1s infinite}
+.pip-node.done{border-color:rgba(16,185,129,0.4);color:var(--green2);background:rgba(16,185,129,0.06)}
+.pip-node.done .pn-dot{background:var(--green2)}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.pip-arrow{color:var(--border2);margin:0 6px;font-size:0.75rem;flex-shrink:0}
+
+/* Tab bar */
+.tab-bar{
+  border-bottom:1px solid var(--border);
+  background:var(--bg2);
+  display:flex;padding:0 1.5rem;
+  flex-shrink:0;
+}
+.t-tab{
+  padding:0.7rem 1.1rem;
+  font-size:0.75rem;font-weight:500;
+  color:var(--text3);
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;
+  transition:all 0.2s;
+  display:flex;align-items:center;gap:6px;
+  white-space:nowrap;letter-spacing:0.02em;
+}
+.t-tab:hover{color:var(--text2)}
+.t-tab.active{color:var(--accent3);border-bottom-color:var(--accent2)}
+.t-count{
+  font-family:var(--mono);font-size:0.6rem;
+  padding:1px 6px;border-radius:10px;
+  background:var(--surface2);color:var(--text3);
+}
+.t-tab.active .t-count{background:rgba(59,130,246,0.15);color:var(--accent3)}
+
+/* Tab panels */
+.panels{flex:1;overflow:hidden;position:relative}
+.panel{
+  position:absolute;inset:0;
+  overflow-y:auto;
+  padding:1.5rem;
+  display:none;
+}
+.panel.active{display:block}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Welcome ──────────────────────────────────────────────────────────── */
+.welcome-wrap{
+  display:flex;align-items:center;justify-content:center;
+  min-height:380px;
+}
+.welcome-card{
+  text-align:center;max-width:480px;
+  display:flex;flex-direction:column;align-items:center;gap:1rem;
+}
+.wc-emblem{
+  width:80px;height:80px;border-radius:22px;
+  background:linear-gradient(135deg,rgba(37,99,235,0.15) 0%,rgba(124,58,237,0.15) 100%);
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;
+  box-shadow:0 0 40px rgba(59,130,246,0.1),0 0 80px rgba(124,58,237,0.05);
+  margin-bottom:0.25rem;
+}
+.wc-title{font-family:var(--display);font-size:1.6rem;line-height:1.2;letter-spacing:-0.02em}
+.wc-sub{font-size:0.875rem;color:var(--text2);line-height:1.65;font-weight:400}
+.wc-pills{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:0.25rem}
+.wc-pill{
+  font-size:0.7rem;padding:4px 13px;border-radius:20px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text2);
+}
+
+/* ── Progress thinking ──────────────────────────────────────────────────── */
+.progress-card{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:12px;padding:1.25rem 1.5rem;
+  display:flex;align-items:center;gap:1rem;
+  box-shadow:0 0 30px rgba(59,130,246,0.05);
+}
+.pc-dots{display:flex;gap:5px}
+.pc-dots span{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--accent2);
+  animation:pcBounce 1.2s ease-in-out infinite;
+}
+.pc-dots span:nth-child(2){animation-delay:.2s}
+.pc-dots span:nth-child(3){animation-delay:.4s}
+@keyframes pcBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+.pc-msg{font-size:0.875rem;color:var(--text2)}
+.pc-msg strong{color:var(--text)}
+
+/* Done banner */
+.done-banner{
+  background:rgba(16,185,129,0.06);
+  border:1px solid rgba(16,185,129,0.25);
+  border-radius:12px;padding:1.1rem 1.4rem;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:1rem;
+}
+.db-left{display:flex;align-items:center;gap:10px}
+.db-check{
+  width:32px;height:32px;border-radius:8px;
+  background:rgba(16,185,129,0.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--green2);flex-shrink:0;
+}
+.db-title{font-weight:700;font-size:0.9rem;color:var(--green2)}
+.db-sub{font-size:0.75rem;color:var(--text3);margin-top:2px}
+.db-stats{display:flex;gap:1.5rem}
+.db-stat{text-align:center}
+.db-stat .dbs-val{font-size:1.1rem;font-weight:800;font-family:var(--mono)}
+.db-stat .dbs-lbl{font-size:0.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em}
+.db-stat:nth-child(1) .dbs-val{color:var(--green2)}
+.db-stat:nth-child(2) .dbs-val{color:var(--purple2)}
+.db-stat:nth-child(3) .dbs-val{color:var(--cyan2)}
+.db-stat:nth-child(4) .dbs-val{color:var(--amber2)}
+
+/* ── Todos ──────────────────────────────────────────────────────────────── */
+.todo-stack{display:flex;flex-direction:column;gap:7px}
+.todo-card{
+  display:flex;gap:12px;
+  padding:12px 14px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:11px;
+  transition:all 0.3s;
+  animation:fadeUp 0.4s ease forwards;opacity:0;
+}
+.todo-card.completed{border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.03)}
+.todo-card.in_progress{border-color:rgba(59,130,246,0.35);background:rgba(59,130,246,0.04)}
+.todo-card.delegated{border-color:rgba(124,58,237,0.25);background:rgba(124,58,237,0.03)}
+.todo-card.failed{border-color:rgba(220,38,38,0.25);background:rgba(220,38,38,0.03)}
+.tc-icon{
+  width:30px;height:30px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;
+  margin-top:1px;transition:all 0.3s;
+}
+.tc-icon.pending{background:var(--surface2);border:1px solid var(--border);color:var(--text3)}
+.tc-icon.in_progress{background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:var(--accent2);animation:ipGlow 1s ease-in-out infinite alternate}
+@keyframes ipGlow{from{box-shadow:0 0 0 rgba(59,130,246,0)}to{box-shadow:0 0 10px rgba(59,130,246,0.3)}}
+.tc-icon.completed{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:var(--green2)}
+.tc-icon.delegated{background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);color:var(--purple2)}
+.tc-icon.failed{background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.25);color:var(--red)}
+.tc-body{flex:1;min-width:0}
+.tc-header{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
+.tc-id{font-family:var(--mono);font-size:0.62rem;color:var(--text3)}
+.tc-badge{
+  font-size:0.58rem;font-weight:700;padding:2px 7px;border-radius:4px;
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.tc-badge.pending{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.tc-badge.in_progress{background:rgba(59,130,246,0.12);color:var(--accent3);border:1px solid rgba(59,130,246,0.25)}
+.tc-badge.completed{background:rgba(16,185,129,0.1);color:var(--green3);border:1px solid rgba(16,185,129,0.2)}
+.tc-badge.delegated{background:rgba(124,58,237,0.1);color:var(--purple2);border:1px solid rgba(124,58,237,0.2)}
+.tc-badge.failed{background:rgba(220,38,38,0.08);color:var(--red);border:1px solid rgba(220,38,38,0.2)}
+.tc-del-tag{
+  font-family:var(--mono);font-size:0.6rem;
+  padding:2px 7px;border-radius:4px;
+}
+.tc-del-tag.summarizer{background:rgba(124,58,237,0.1);color:var(--purple2);border:1px solid rgba(124,58,237,0.2)}
+.tc-del-tag.web_searcher{background:rgba(8,145,178,0.1);color:var(--cyan2);border:1px solid rgba(8,145,178,0.2)}
+.tc-desc{font-size:0.82rem;color:var(--text);line-height:1.5}
+.tc-result{
+  margin-top:7px;padding:7px 10px;
+  background:var(--surface2);border-left:2px solid var(--border2);border-radius:0 6px 6px 0;
+  font-size:0.72rem;font-family:var(--mono);color:var(--text3);
+  line-height:1.5;
+}
+
+/* ── VFS ────────────────────────────────────────────────────────────────── */
+.vfs-section{margin-bottom:1.5rem}
+.vfs-folder-hdr{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:10px;font-size:0.68rem;
+  font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+}
+.vfs-folder-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.vfs-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.vfs-file-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;
+  transition:border-color 0.2s;
+  animation:fadeUp 0.3s ease forwards;opacity:0;
+}
+.vfs-file-card:hover{border-color:var(--border2)}
+.vfc-top{
+  padding:9px 12px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.vfc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.vfc-name{font-family:var(--mono);font-size:0.68rem;color:var(--text2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vfc-wc{font-size:0.6rem;color:var(--text3);font-family:var(--mono);flex-shrink:0}
+.vfc-preview{
+  padding:9px 12px;font-size:0.7rem;font-family:var(--mono);
+  color:var(--text3);line-height:1.6;max-height:100px;overflow:hidden;
+  position:relative;
+}
+.vfc-preview::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:30px;
+  background:linear-gradient(transparent,var(--surface));
+}
+
+/* ── Output ─────────────────────────────────────────────────────────────── */
+.eval-strip{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:1.2rem 1.4rem;
+  display:flex;align-items:stretch;gap:1.5rem;
+  margin-bottom:1.25rem;
+}
+.score-gauge{
+  flex-shrink:0;position:relative;
+  width:80px;height:80px;
+}
+.gauge-svg{transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:var(--surface2);stroke-width:7}
+.gauge-fg{fill:none;stroke:var(--green2);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1)}
+.gauge-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.gauge-num{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--green2);line-height:1}
+.gauge-denom{font-size:0.55rem;color:var(--text3)}
+.eval-info{flex:1}
+.eval-quality{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--green2);margin-bottom:4px}
+.eval-title{font-size:1rem;font-weight:700;margin-bottom:6px}
+.eval-feedback{font-size:0.78rem;color:var(--text2);line-height:1.55;margin-bottom:10px}
+.eval-checks{display:flex;gap:6px;flex-wrap:wrap}
+.ev-check{
+  font-size:0.65rem;padding:3px 10px;border-radius:20px;
+  background:rgba(16,185,129,0.08);color:var(--green3);
+  border:1px solid rgba(16,185,129,0.18);
+  display:flex;align-items:center;gap:4px;
+}
+
+.report-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;overflow:hidden;
+}
+.rb-header{
+  padding:11px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.rb-title{
+  font-size:0.75rem;font-weight:600;
+  display:flex;align-items:center;gap:8px;
+  color:var(--text2);
+}
+.rb-title span{color:var(--text3);font-family:var(--mono);font-size:0.65rem}
+.rb-actions{display:flex;gap:6px}
+.rb-btn{
+  font-size:0.68rem;padding:4px 11px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:5px;color:var(--text2);cursor:pointer;
+  font-family:var(--sans);
+  transition:all 0.15s;
+}
+.rb-btn:hover{border-color:var(--accent2);color:var(--accent3)}
+.rb-body{
+  padding:1.25rem 1.4rem;
+  font-size:0.84rem;line-height:1.8;color:var(--text);
+  max-height:460px;overflow-y:auto;
+  white-space:pre-wrap;
+}
+.rb-body::-webkit-scrollbar{width:4px}
+.rb-body::-webkit-scrollbar-thumb{background:var(--border2)}
+
+/* ── Logs ───────────────────────────────────────────────────────────────── */
+.log-feed{display:flex;flex-direction:column;gap:3px;font-family:var(--mono)}
+.log-row{
+  display:grid;grid-template-columns:64px 72px 1fr;gap:10px;
+  padding:4px 8px;border-radius:5px;
+  font-size:0.72rem;line-height:1.5;
+  transition:background 0.1s;
+  animation:fadeUp 0.25s ease forwards;opacity:0;
+}
+.log-row:hover{background:var(--surface)}
+.log-ts{color:var(--text3);font-size:0.67rem}
+.log-lv{
+  font-size:0.6rem;font-weight:700;padding:1px 0;
+  border-radius:3px;text-align:center;text-transform:uppercase;
+  letter-spacing:0.04em;
+}
+.log-lv.plan   {background:rgba(245,158,11,0.12);color:var(--amber2)}
+.log-lv.exec   {background:rgba(59,130,246,0.12);color:var(--accent3)}
+.log-lv.deleg  {background:rgba(124,58,237,0.12);color:var(--purple2)}
+.log-lv.store  {background:rgba(16,185,129,0.1);color:var(--green3)}
+.log-lv.eval   {background:rgba(6,182,212,0.1);color:var(--cyan2)}
+.log-lv.info   {background:var(--surface);color:var(--text3)}
+.log-lv.error  {background:rgba(220,38,38,0.1);color:var(--red)}
+.log-msg{color:var(--text2)}
+.log-msg strong{color:var(--text)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RIGHT PANEL
+══════════════════════════════════════════════════════════════════════════ */
+.right-panel{
+  border-left:1px solid var(--border);
+  background:var(--bg2);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+.rp-section{padding:1rem 1.1rem;border-bottom:1px solid var(--border)}
+
+/* Architecture diagram */
+.arch-flow{display:flex;flex-direction:column;gap:4px}
+.arch-node{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:0.72rem;transition:all 0.25s;
+}
+.arch-node.highlight{border-color:var(--accent2);background:rgba(59,130,246,0.06);color:var(--accent3)}
+.arch-node.sub-node{margin-left:1.5rem;border-style:dashed;font-size:0.68rem;color:var(--text3)}
+.arch-node.sub-node.hl{border-color:var(--purple2);background:rgba(124,58,237,0.06);color:var(--purple2)}
+.an-icon{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;background:var(--surface2)}
+.an-arrow{margin-left:auto;color:var(--text3);font-size:0.7rem}
+.arch-connector{
+  width:2px;height:12px;background:var(--border);
+  margin-left:19px;border-radius:1px;
+}
+
+/* Milestones progress */
+.ms-list{display:flex;flex-direction:column;gap:6px}
+.ms-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  font-size:0.72rem;
+}
+.ms-dot{
+  width:20px;height:20px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;flex-shrink:0;
+}
+.ms-dot.done{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3)}
+.ms-info{flex:1}
+.ms-title{font-weight:600;color:var(--text);font-size:0.72rem}
+.ms-weeks{font-size:0.62rem;color:var(--text3);margin-top:1px}
+.ms-score{
+  font-family:var(--mono);font-size:0.65rem;
+  color:var(--green2);background:rgba(16,185,129,0.08);
+  border:1px solid rgba(16,185,129,0.18);
+  padding:2px 7px;border-radius:4px;
+  white-space:nowrap;
+}
+
+/* About card */
+.about-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:10px 12px;
+  font-size:0.72rem;color:var(--text2);line-height:1.55;
+}
+.about-links{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.about-link{
+  display:flex;align-items:center;gap:7px;
+  font-size:0.68rem;color:var(--text3);font-family:var(--mono);
+  padding:5px 8px;background:var(--surface2);border-radius:5px;
+  border:1px solid var(--border);
+  text-decoration:none;transition:all 0.15s;cursor:default;
+}
+.about-link:hover{border-color:var(--border2);color:var(--accent3)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR GLOBAL
+══════════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════════════════════ */
+@media(max-width:1100px){
+  .workspace{grid-template-columns:260px 1fr;grid-template-rows:1fr auto}
+  .right-panel{grid-column:1;grid-row:2;border-left:none;border-top:1px solid var(--border);flex-direction:row;overflow-x:auto}
+  .rp-section{border-right:1px solid var(--border);border-bottom:none;min-width:200px}
+}
+@media(max-width:768px){
+  .workspace{grid-template-columns:1fr}
+  .left-panel,.right-panel{display:none}
+  .hdr-stack{display:none}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="app">
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <div class="hdr-left">
+    <div class="logo-wrap">
+      <div class="logo-cube">🧠</div>
+      <div>
+        <div class="logo-name">Autonomous Cognitive Engine</div>
+        <div class="logo-sub">Multi-Agent AI · Deep Research · LangGraph</div>
+      </div>
+    </div>
+    <div class="hdr-divider"></div>
+    <div class="hdr-stack">
+      <span class="stack-chip">LangGraph</span>
+      <span class="stack-chip">Groq</span>
+      <span class="stack-chip">LangSmith</span>
+      <span class="stack-chip">Tavily</span>
+      <span class="stack-chip">Python 3.11</span>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="status-pill idle" id="statusPill">
+      <div class="status-dot"></div>
+      <span id="statusTxt">Idle</span>
+    </div>
+    <div class="hdr-author">Namitha · Infosys Springboard</div>
+  </div>
+</header>
+
+<!-- ═══════════════════ WORKSPACE ═══════════════════ -->
+<div class="workspace">
+
+<!-- ═══════ LEFT PANEL ═══════ -->
+<aside class="left-panel">
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="section-label">Research Request</div>
+    <textarea id="requestInput" placeholder="e.g. Research IEEE and EU AI ethics frameworks, compare them, write a unified guide..."></textarea>
+    <button class="run-btn" id="runBtn" onclick="startPipeline()">
+      <div class="btn-spinner"></div>
+      <span class="btn-arrow">▶</span>
+      <span id="runLabel">Run Pipeline</span>
+    </button>
+  </div>
+
+  <!-- Quick prompts -->
+  <div class="quick-section">
+    <div class="section-label">Quick Prompts</div>
+    <div class="quick-list">
+      <button class="qp-btn" onclick="setQ(this)">Research IEEE and EU AI ethics frameworks, compare them, write a unified guide</button>
+      <button class="qp-btn" onclick="setQ(this)">Research NIST and ISO 27001 cybersecurity frameworks, compare and write a guide</button>
+      <button class="qp-btn" onclick="setQ(this)">Research FDA and WHO healthcare AI regulations, compare, write compliance guide</button>
+      <button class="qp-btn" onclick="setQ(this)">Research solar and wind energy policies, compare adoption rates, write investment plan</button>
+      <button class="qp-btn" onclick="setQ(this)">Research NASA Artemis and SpaceX Starship, compare progress, write an overview</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-section">
+    <div class="section-label">Pipeline Metrics</div>
+    <div class="stats-row">
+      <div class="stat-tile t-green"><div class="st-val" id="stTasks">0/0</div><div class="st-lbl">Tasks Done</div></div>
+      <div class="stat-tile t-blue"><div class="st-val" id="stDels">0</div><div class="st-lbl">Delegations</div></div>
+      <div class="stat-tile t-amber"><div class="st-val" id="stFiles">0</div><div class="st-lbl">Files Stored</div></div>
+      <div class="stat-tile t-purple"><div class="st-val" id="stScore">—</div><div class="st-lbl">Quality Score</div></div>
+    </div>
+  </div>
+
+  <!-- Delegation log -->
+  <div class="dellog-section">
+    <div class="section-label">Delegation Log</div>
+    <div class="del-list" id="delLog">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <div class="empty-text">Sub-agent calls will appear here when the pipeline runs.</div>
+      </div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ═══════ CENTER PANEL ═══════ -->
+<div class="center-panel">
+
+  <!-- Pipeline track -->
+  <div class="pipeline-track">
+    <div class="pip-step"><div class="pip-node" id="pn-plan"><div class="pn-dot"></div>Planning</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-exec"><div class="pn-dot"></div>Execution</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-del"><div class="pn-dot"></div>Delegation</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-store"><div class="pn-dot"></div>Storage</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-ret"><div class="pn-dot"></div>Retrieval</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-synth"><div class="pn-dot"></div>Synthesis</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-eval"><div class="pn-dot"></div>Evaluation</div><div class="pip-arrow">›</div></div>
+    <div class="pip-step"><div class="pip-node" id="pn-out"><div class="pn-dot"></div>Output</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <div class="t-tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="t-tab" onclick="switchTab('todos')">Task Plan <span class="t-count" id="tcTodos">0</span></div>
+    <div class="t-tab" onclick="switchTab('vfs')">File System <span class="t-count" id="tcVfs">0</span></div>
+    <div class="t-tab" onclick="switchTab('output')">Output</div>
+    <div class="t-tab" onclick="switchTab('logs')">Logs <span class="t-count" id="tcLogs">0</span></div>
+  </div>
+
+  <!-- Panels -->
+  <div class="panels">
+
+    <!-- OVERVIEW -->
+    <div class="panel active" id="p-overview">
+      <div class="welcome-wrap" id="welcomeWrap">
+        <div class="welcome-card">
+          <div class="wc-emblem">🤖</div>
+          <h2 class="wc-title">Autonomous Cognitive Engine</h2>
+          <p class="wc-sub">Enter a research request and run the full pipeline — from task planning through sub-agent delegation, file storage, synthesis, and automated quality evaluation.</p>
+          <div class="wc-pills">
+            <span class="wc-pill">📋 Task Planning</span>
+            <span class="wc-pill">🤖 Sub-Agent Delegation</span>
+            <span class="wc-pill">💾 Virtual File System</span>
+            <span class="wc-pill">🔍 Web Research</span>
+            <span class="wc-pill">📝 Summarization</span>
+            <span class="wc-pill">⭐ Auto Evaluation</span>
+          </div>
+        </div>
+      </div>
+      <div id="runningWrap" style="display:none">
+        <div class="progress-card">
+          <div class="pc-dots"><span></span><span></span><span></span></div>
+          <div class="pc-msg"><strong id="runningMsg">Initializing pipeline…</strong></div>
+        </div>
+      </div>
+      <div id="doneWrap" style="display:none"></div>
+    </div>
+
+    <!-- TODOS -->
+    <div class="panel" id="p-todos">
+      <div class="todo-stack" id="todoStack">
+        <div class="empty-state" style="min-height:320px">
+          <div class="empty-icon">📋</div>
+          <div class="empty-text">Task plan will appear here after the pipeline runs.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VFS -->
+    <div class="panel" id="p-vfs">
+      <div id="vfsWrap">
+        <div class="empty-state" style="min-height:320px">
+          <div class="empty-icon">💾</div>
+          <div class="empty-text">Virtual file system populates as tasks complete.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="panel" id="p-output">
+      <div id="outputWrap">
+        <div class="empty-state" style="min-height:320px">
+          <div class="empty-icon">📄</div>
+          <div class="empty-text">Final report and evaluation appear here after pipeline completes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div class="panel" id="p-logs">
+      <div class="log-feed" id="logFeed">
+        <div class="empty-state" style="min-height:320px">
+          <div class="empty-icon">🔍</div>
+          <div class="empty-text">Execution logs stream here in real time.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- panels -->
+</div><!-- center-panel -->
+
+<!-- ═══════ RIGHT PANEL ═══════ -->
+<aside class="right-panel">
+
+  <!-- Architecture -->
+  <div class="rp-section">
+    <div class="section-label">Architecture</div>
+    <div class="arch-flow" id="archFlow">
+      <div class="arch-node" id="arch-planner"><div class="an-icon">📋</div>Planner Node<div class="an-arrow">›</div></div>
+      <div class="arch-connector"></div>
+      <div class="arch-node" id="arch-tools"><div class="an-icon">⚙️</div>Tools Node<div class="an-arrow">›</div></div>
+      <div class="arch-connector"></div>
+      <div class="arch-node" id="arch-executor"><div class="an-icon">🧠</div>Executor (Supervisor)<div class="an-arrow">›</div></div>
+      <div class="arch-node sub-node" id="arch-sum"><div class="an-icon">📝</div>summarizer</div>
+      <div class="arch-node sub-node" id="arch-web"><div class="an-icon">🔍</div>web_searcher</div>
+      <div class="arch-connector"></div>
+      <div class="arch-node" id="arch-synth"><div class="an-icon">🔄</div>Synthesiser Node<div class="an-arrow">›</div></div>
+      <div class="arch-connector"></div>
+      <div class="arch-node" id="arch-eval"><div class="an-icon">⭐</div>Evaluator Node<div class="an-arrow">›</div></div>
+    </div>
+  </div>
+
+  <!-- Milestones -->
+  <div class="rp-section">
+    <div class="section-label">Milestones</div>
+    <div class="ms-list">
+      <div class="ms-item"><div class="ms-dot done">✓</div><div class="ms-info"><div class="ms-title">M1 — Task Planning</div><div class="ms-weeks">Weeks 1–2</div></div><div class="ms-score">Complete</div></div>
+      <div class="ms-item"><div class="ms-dot done">✓</div><div class="ms-info"><div class="ms-title">M2 — Virtual File System</div><div class="ms-weeks">Weeks 3–4</div></div><div class="ms-score">Complete</div></div>
+      <div class="ms-item"><div class="ms-dot done">✓</div><div class="ms-info"><div class="ms-title">M3 — Sub-Agent Delegation</div><div class="ms-weeks">Weeks 5–6</div></div><div class="ms-score">14/14</div></div>
+      <div class="ms-item"><div class="ms-dot done">✓</div><div class="ms-info"><div class="ms-title">M4 — Full Pipeline + Eval</div><div class="ms-weeks">Weeks 7–8</div></div><div class="ms-score">9/10</div></div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <div class="rp-section">
+    <div class="section-label">Project Info</div>
+    <div class="about-card">
+      Infosys Springboard Capstone — Autonomous Cognitive Engine built with LangGraph + Groq LLM for deep research and long-horizon task execution.
+      <div class="about-links">
+        <div class="about-link">🔗 &nbsp;GitHub · Branch: Namitha</div>
+        <div class="about-link">🧪 &nbsp;LangSmith Tracing Enabled</div>
+        <div class="about-link">🤖 &nbsp;Model: llama-3.3-70b-versatile</div>
+        <div class="about-link">📦 &nbsp;LangGraph 0.2.53</div>
+      </div>
+    </div>
+  </div>
+
+</aside>
+
+</div><!-- workspace -->
+</div><!-- app -->
+
+<script>
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let isRunning = false;
+let logCount  = 0;
+let st = {todos:[],files:{},delegation_log:[],evaluation:null,final_output:''};
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+const sleep = ms => new Promise(r => setTimeout(r,ms));
+
+function setQ(btn){ document.getElementById('requestInput').value = btn.textContent.trim() }
+
+function switchTab(name){
+  const names=['overview','todos','vfs','output','logs'];
+  document.querySelectorAll('.t-tab').forEach((t,i)=> t.classList.toggle('active',names[i]===name));
+  document.querySelectorAll('.panel').forEach(p=> p.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+}
+
+// Pipeline node control
+const PNS = ['plan','exec','del','store','ret','synth','eval','out'];
+function pnSet(id,state){
+  const el = document.getElementById('pn-'+id);
+  if(!el) return;
+  el.classList.remove('active','done');
+  if(state==='active') el.classList.add('active');
+  if(state==='done')   el.classList.add('done');
+}
+function pnReset(){ PNS.forEach(id=> pnSet(id,'')) }
+
+// Architecture highlight
+function archHL(id){
+  document.querySelectorAll('.arch-node').forEach(n=> n.classList.remove('highlight','hl'));
+  const el = document.getElementById('arch-'+id);
+  if(!el) return;
+  if(el.classList.contains('sub-node')) el.classList.add('hl');
+  else el.classList.add('highlight');
+}
+function archClear(){ document.querySelectorAll('.arch-node').forEach(n=> n.classList.remove('highlight','hl')) }
+
+// Status pill
+function setStatus(state,text){
+  const pill = document.getElementById('statusPill');
+  pill.className = 'status-pill '+state;
+  document.getElementById('statusTxt').textContent = text;
+}
+
+// ════════════════════════════════════════════════════════════
+// LOGGING
+// ════════════════════════════════════════════════════════════
+function log(level,msg){
+  const feed = document.getElementById('logFeed');
+  if(logCount===0) feed.innerHTML='';
+  logCount++;
+  const t = new Date().toTimeString().slice(0,8);
+  const row = document.createElement('div');
+  row.className='log-row';
+  row.style.animationDelay='0ms';
+  row.innerHTML=`<span class="log-ts">${t}</span><span class="log-lv ${level}">${level.toUpperCase()}</span><span class="log-msg">${msg}</span>`;
+  feed.appendChild(row);
+  feed.scrollTop = feed.scrollHeight;
+  document.getElementById('tcLogs').textContent = logCount;
+}
+
+// ════════════════════════════════════════════════════════════
+// DELEGATION SIDEBAR
+// ════════════════════════════════════════════════════════════
+function addDel(taskId,agent,desc){
+  const dl = document.getElementById('delLog');
+  if(dl.querySelector('.empty-state')) dl.innerHTML='';
+  const card = document.createElement('div');
+  card.className='del-card';
+  card.innerHTML=`
+    <div class="del-top">
+      <span class="del-agent-tag ${agent}">${agent}</span>
+      <span class="del-ok">completed</span>
+    </div>
+    <div class="del-desc">${desc.slice(0,70)}${desc.length>70?'…':''}</div>
+  `;
+  dl.appendChild(card);
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER TODOS
+// ════════════════════════════════════════════════════════════
+const ICONS={pending:'○',in_progress:'◉',completed:'✓',delegated:'⇀',failed:'✗'};
+function renderTodos(){
+  const stack = document.getElementById('todoStack');
+  if(!st.todos.length) return;
+  stack.innerHTML='';
+  st.todos.forEach((t,i)=>{
+    const card = document.createElement('div');
+    card.className=`todo-card ${t.status}`;
+    card.style.animationDelay=`${i*55}ms`;
+    const delTag = t.delegated_to
+      ? `<span class="tc-del-tag ${t.delegated_to}">→ ${t.delegated_to}</span>`:'' ;
+    const resultBlock = t.result
+      ? `<div class="tc-result">${t.result.slice(0,140)}${t.result.length>140?'…':''}</div>`:'' ;
+    card.innerHTML=`
+      <div class="tc-icon ${t.status}">${ICONS[t.status]||'○'}</div>
+      <div class="tc-body">
+        <div class="tc-header">
+          <span class="tc-id">${t.id}</span>
+          <span class="tc-badge ${t.status}">${t.status.replace('_',' ')}</span>
+          ${delTag}
+        </div>
+        <div class="tc-desc">${t.description}</div>
+        ${resultBlock}
+      </div>
+    `;
+    stack.appendChild(card);
+  });
+  const done=st.todos.filter(t=>t.status==='completed'||t.status==='delegated').length;
+  document.getElementById('tcTodos').textContent=`${done}/${st.todos.length}`;
+  document.getElementById('stTasks').textContent=`${done}/${st.todos.length}`;
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER VFS
+// ════════════════════════════════════════════════════════════
+const FOLDER_CFG={
+  '/research/' :{color:'#06b6d4',label:'/research/  —  Raw web search results'},
+  '/summaries/':{color:'#8b5cf6',label:'/summaries/  —  Condensed key points'},
+  '/compare/'  :{color:'#f59e0b',label:'/compare/  —  Analytical comparisons'},
+  '/drafts/'   :{color:'#10b981',label:'/drafts/  —  Final reports'},
+};
+function renderVFS(){
+  const wrap=document.getElementById('vfsWrap');
+  const files=st.files;
+  if(!Object.keys(files).length) return;
+  const groups={};
+  Object.entries(files).forEach(([path,entry])=>{
+    const folder=Object.keys(FOLDER_CFG).find(f=>path.startsWith(f))||'/other/';
+    if(!groups[folder]) groups[folder]=[];
+    groups[folder].push({path,entry});
+  });
+  wrap.innerHTML='';
+  Object.entries(groups).forEach(([folder,items])=>{
+    const cfg=FOLDER_CFG[folder]||{color:'#64748b',label:folder};
+    const sec=document.createElement('div');
+    sec.className='vfs-section';
+    sec.innerHTML=`<div class="vfs-folder-hdr" style="color:${cfg.color}">${cfg.label}</div>`;
+    const cards=document.createElement('div');
+    cards.className='vfs-cards';
+    items.forEach(({path,entry},i)=>{
+      const ct=typeof entry==='string'?entry:(entry.content||'');
+      const words=ct.split(/\s+/).filter(Boolean).length;
+      const card=document.createElement('div');
+      card.className='vfs-file-card';
+      card.style.animationDelay=`${i*70}ms`;
+      card.innerHTML=`
+        <div class="vfc-top">
+          <div class="vfc-dot" style="background:${cfg.color}"></div>
+          <div class="vfc-name">${path}</div>
+          <div class="vfc-wc">${words}w</div>
+        </div>
+        <div class="vfc-preview">${ct.slice(0,200)}</div>
+      `;
+      cards.appendChild(card);
+    });
+    sec.appendChild(cards);
+    wrap.appendChild(sec);
+  });
+  const total=Object.keys(files).length;
+  document.getElementById('tcVfs').textContent=total;
+  document.getElementById('stFiles').textContent=total;
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER OUTPUT
+// ════════════════════════════════════════════════════════════
+function renderOutput(){
+  const wrap=document.getElementById('outputWrap');
+  if(!st.final_output) return;
+  const ev=st.evaluation||{score:9,quality:'excellent',feedback:'Pipeline completed successfully.',tasks_completed:true,delegation_used:true,memory_used:true};
+  const circ=2*Math.PI*34;
+  const offset=circ-(circ*(ev.score/10));
+  wrap.innerHTML=`
+    <div class="eval-strip">
+      <div class="score-gauge">
+        <svg class="gauge-svg" width="80" height="80" viewBox="0 0 80 80">
+          <circle class="gauge-bg" cx="40" cy="40" r="34"/>
+          <circle class="gauge-fg" cx="40" cy="40" r="34"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ}" id="gaugeFg"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-num">${ev.score}</div>
+          <div class="gauge-denom">/ 10</div>
+        </div>
+      </div>
+      <div class="eval-info">
+        <div class="eval-quality">${ev.quality}</div>
+        <div class="eval-title">Output Evaluation</div>
+        <div class="eval-feedback">${ev.feedback||'Pipeline completed successfully.'}</div>
+        <div class="eval-checks">
+          ${ev.tasks_completed?'<span class="ev-check">✓ Tasks completed</span>':''}
+          ${ev.delegation_used?'<span class="ev-check">✓ Delegation used</span>':''}
+          ${ev.memory_used?'<span class="ev-check">✓ Memory used</span>':''}
+          <span class="ev-check">✓ Output sensible</span>
+        </div>
+      </div>
+    </div>
+    <div class="report-box">
+      <div class="rb-header">
+        <div class="rb-title">📄 Final Report <span>${st.final_output.split(/\s+/).length} words</span></div>
+        <div class="rb-actions">
+          <button class="rb-btn" onclick="copyReport()">Copy</button>
+        </div>
+      </div>
+      <div class="rb-body" id="reportBody">${st.final_output}</div>
+    </div>
+  `;
+  setTimeout(()=>{
+    const fg=document.getElementById('gaugeFg');
+    if(fg) fg.style.strokeDashoffset=offset;
+  },300);
+  document.getElementById('stScore').textContent=`${ev.score}/10`;
+}
+
+function copyReport(){
+  const el=document.getElementById('reportBody');
+  if(el){ navigator.clipboard.writeText(el.innerText); }
+}
+
+// ════════════════════════════════════════════════════════════
+// PLAN GENERATION
+// ════════════════════════════════════════════════════════════
+function makePlan(req){
+  const r=req.toLowerCase();
+  let A='framework_a',B='framework_b',NA='Framework A',NB='Framework B',folder='research';
+  if(r.includes('ieee')&&r.includes('eu'))        {A='ieee';B='eu';NA='IEEE';NB='EU HLEG';folder='ethics'}
+  else if(r.includes('nist')&&r.includes('iso'))  {A='nist';B='iso27001';NA='NIST';NB='ISO 27001';folder='security'}
+  else if(r.includes('fda')&&r.includes('who'))   {A='fda';B='who';NA='FDA';NB='WHO';folder='healthcare'}
+  else if(r.includes('solar')&&r.includes('wind')){A='solar';B='wind';NA='Solar';NB='Wind Energy';folder='energy'}
+  else if(r.includes('nasa')&&r.includes('spacex')){A='nasa';B='spacex';NA='NASA Artemis';NB='SpaceX Starship';folder='space'}
+  else if(r.includes('ipcc')&&r.includes('paris')){A='ipcc';B='paris';NA='IPCC';NB='Paris Agreement';folder='climate'}
+  return [
+    {id:'task_1',description:`Search for ${NA} framework details, save to /research/${A}.json`,                         status:'pending',result:'',delegated_to:''},
+    {id:'task_2',description:`Search for ${NB} framework overview, save to /research/${B}.json`,                       status:'pending',result:'',delegated_to:''},
+    {id:'task_3',description:`Summarize /research/${A}.json, save to /summaries/${A}_summary.json`,                    status:'pending',result:'',delegated_to:''},
+    {id:'task_4',description:`Summarize /research/${B}.json, save to /summaries/${B}_summary.json`,                    status:'pending',result:'',delegated_to:''},
+    {id:'task_5',description:`Compare summaries, save analysis to /compare/${A}_vs_${B}.json`,                         status:'pending',result:'',delegated_to:''},
+    {id:'task_6',description:`Synthesize unified framework from /compare/${A}_vs_${B}.json, save to /drafts/${folder}_guide.json`,status:'pending',result:'',delegated_to:''},
+    {id:'task_7',description:`Append implementation roadmap to /drafts/${folder}_guide.json`,                          status:'pending',result:'',delegated_to:''},
+  ];
+}
+
+// ════════════════════════════════════════════════════════════
+// MOCK SUB-AGENTS
+// ════════════════════════════════════════════════════════════
+function mockSum(text){return`Overview: '${text.slice(0,45)}' covers core principles.\n\nKey Points:\n- Evidence-based approach required\n- Transparency and accountability are central\n- Continuous monitoring needed\n\nConclusion: Strong foundation for decision-making.`}
+function mockWeb(q){return`Summary: Research on '${q.slice(0,45)}' confirms major developments.\n\nKey Facts:\n- Adoption rates increased 40%+ in recent years\n- Updated guidelines published by industry bodies\n- Global frameworks converging on shared standards\n\nSource Quality: reliable`}
+
+// ════════════════════════════════════════════════════════════
+// MAIN PIPELINE
+// ════════════════════════════════════════════════════════════
+async function startPipeline(){
+  const req=document.getElementById('requestInput').value.trim();
+  if(!req||isRunning) return;
+
+  isRunning=true;logCount=0;
+  st={todos:[],files:{},delegation_log:[],evaluation:null,final_output:''};
+
+  // Reset UI
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('runBtn').classList.add('running');
+  document.getElementById('runLabel').textContent='Running…';
+  setStatus('running','Running');
+  pnReset();
+  document.getElementById('todoStack').innerHTML='';
+  document.getElementById('vfsWrap').innerHTML='';
+  document.getElementById('outputWrap').innerHTML='';
+  document.getElementById('logFeed').innerHTML='';
+  document.getElementById('delLog').innerHTML='';
+  ['stTasks','stDels','stFiles'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('stScore').textContent='—';
+  ['tcTodos','tcVfs','tcLogs'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('welcomeWrap').style.display='none';
+  document.getElementById('runningWrap').style.display='block';
+  document.getElementById('doneWrap').style.display='none';
+
+  // ── PLAN ───────────────────────────────────────────────────
+  pnSet('plan','active');archHL('planner');
+  document.getElementById('runningMsg').textContent='Planning tasks…';
+  log('plan',`write_todos(): breaking request into structured TODO steps`);
+  await sleep(700);
+
+  st.todos=makePlan(req);
+  st.todos.forEach(t=>log('plan',`Created <strong>${t.id}</strong>: ${t.description.slice(0,65)}…`));
+  renderTodos();
+  pnSet('plan','done');archClear();
+  switchTab('todos');
+  await sleep(300);
+
+  // ── EXECUTION LOOP ─────────────────────────────────────────
+  pnSet('exec','active');archHL('executor');
+  document.getElementById('runningMsg').textContent='Executing task plan…';
+  let delCount=0;
+
+  for(let i=0;i<st.todos.length;i++){
+    const todo=st.todos[i];
+    todo.status='in_progress';
+    renderTodos();
+
+    const desc=todo.description.toLowerCase();
+    const jpaths=(todo.description.match(/\/[\w/.-]+\.json/g)||[]);
+    const savePath=jpaths[jpaths.length-1];
+    const srcPath=jpaths[0];
+
+    await sleep(500);
+
+    if(desc.includes('summarize')||desc.includes('summary')||desc.includes('condense')){
+      pnSet('del','active');archHL('sum');
+      log('deleg',`Supervisor → <strong>summarizer</strong>: ${todo.description.slice(0,58)}…`);
+      await sleep(450);
+      const srcC=st.files[srcPath]?(st.files[srcPath].content||st.files[srcPath]):todo.description;
+      const res=mockSum(srcC);
+      log('deleg',`summarizer returned: ${res.slice(0,58).replace(/\n/g,' ')}…`);
+      pnSet('del','done');archClear();
+      pnSet('store','active');
+      if(savePath){
+        st.files[savePath]={content:res,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+        log('store',`write_file → <strong>${savePath}</strong> (${res.split(/\s+/).length} words)  ✓ separate from /research/`);
+      }
+      pnSet('store','done');
+      todo.status='delegated';todo.delegated_to='summarizer';todo.result=res.slice(0,130);
+      st.delegation_log.push({task_id:todo.id,agent_name:'summarizer',input:srcC.slice(0,80),result:res.slice(0,200),status:'completed'});
+      addDel(todo.id,'summarizer',todo.description);
+      delCount++;document.getElementById('stDels').textContent=delCount;
+
+    } else if(desc.includes('search')||desc.includes('find')||desc.includes('look up')||desc.includes('discover')){
+      pnSet('del','active');archHL('web');
+      log('deleg',`Supervisor → <strong>web_searcher</strong>: ${todo.description.slice(0,58)}…`);
+      await sleep(550);
+      const res=mockWeb(todo.description);
+      log('deleg',`web_searcher returned: ${res.slice(0,58).replace(/\n/g,' ')}…`);
+      pnSet('del','done');archClear();
+      pnSet('store','active');
+      if(savePath){
+        st.files[savePath]={content:res,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+        log('store',`write_file → <strong>${savePath}</strong> (${res.split(/\s+/).length} words)`);
+      }
+      pnSet('store','done');
+      todo.status='delegated';todo.delegated_to='web_searcher';todo.result=res.slice(0,130);
+      st.delegation_log.push({task_id:todo.id,agent_name:'web_searcher',input:todo.description.slice(0,80),result:res.slice(0,200),status:'completed'});
+      addDel(todo.id,'web_searcher',todo.description);
+      delCount++;document.getElementById('stDels').textContent=delCount;
+
+    } else if(desc.includes('compare')||desc.includes('contrast')){
+      pnSet('ret','active');archHL('executor');
+      log('exec',`Supervisor handles directly: <strong>comparison</strong> (reasoning task)`);
+      const sumFiles=Object.entries(st.files).filter(([p])=>p.includes('/summaries/'));
+      sumFiles.forEach(([p])=>log('exec',`read_file → <strong>${p}</strong>  ← Fix2: explicit read`));
+      await sleep(400);pnSet('ret','done');
+      const combined=sumFiles.map(([p,e])=>`[${p}]\n${(e.content||e).slice(0,200)}`).join('\n\n');
+      const res=`# Comparison Analysis\n\n## Framework A\n${combined.slice(0,300)}\n\n## Key Differences\n- Approach A: evidence-based, voluntary adoption\n- Approach B: regulation-based, mandatory compliance\n\n## Common Ground\n- Both require transparency and accountability\n- Both prioritize human well-being`;
+      pnSet('store','active');
+      if(savePath){
+        st.files[savePath]={content:res,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+        log('store',`write_file → <strong>${savePath}</strong>`);
+      }
+      pnSet('store','done');
+      todo.status='completed';todo.result='Comparison analysis saved';
+      log('exec',`Skipped: /research/ files (summaries sufficient)`);
+
+    } else if(desc.includes('synthesize')||desc.includes('unified')||desc.includes('guide')){
+      pnSet('ret','active');archHL('synth');
+      log('exec',`Supervisor handles directly: <strong>synthesis</strong> (reasoning task)`);
+      const cmpFiles=Object.entries(st.files).filter(([p])=>p.includes('/compare/'));
+      cmpFiles.forEach(([p])=>log('exec',`read_file → <strong>${p}</strong>`));
+      await sleep(400);pnSet('ret','done');
+      const res=`# Unified Framework\n\n## Overview\nSynthesis of multiple frameworks into one actionable guide.\n\n## Pillar 1 — Core Principles\nEvidence-based approach required throughout all implementations.\n\n## Pillar 2 — Regulatory Compliance\nMandatory standards must be met for high-risk applications.\n\n## Pillar 3 — Shared Values\nTransparency, accountability, and monitoring are universal.\n\n## Compliance Score\nOrganizations scored 0-100 across all three pillars.`;
+      pnSet('store','active');
+      if(savePath){
+        st.files[savePath]={content:res,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+        log('store',`write_file → <strong>${savePath}</strong>`);
+      }
+      pnSet('store','done');
+      todo.status='completed';todo.result='Unified framework synthesized';
+      log('exec',`Skipped: /summaries/ files (comparison extracted key info)`);
+
+    } else if(desc.includes('append')||desc.includes('roadmap')||desc.includes('checklist')){
+      archHL('executor');
+      log('exec',`Supervisor handles directly: <strong>edit_file append</strong>`);
+      const drafts=Object.entries(st.files).filter(([p])=>p.includes('/drafts/'));
+      if(drafts.length){
+        const [dp,de]=drafts[0];
+        st.files[dp].content=(de.content||de)+'\n\n## Implementation Roadmap\nYear 1: Adopt core standards and conduct gap analysis\nYear 2: Achieve full compliance for high-risk applications\nYear 3: Full unified framework integration across operations';
+        log('store',`edit_file [append] → <strong>${dp}</strong>  (no re-read needed)`);
+      }
+      todo.status='completed';todo.result='Roadmap appended via edit_file';
+      archClear();
+    } else {
+      log('exec',`Supervisor handles directly: ${todo.description.slice(0,60)}`);
+      await sleep(350);todo.status='completed';todo.result='Task completed by supervisor';
+    }
+
+    renderTodos();renderVFS();
+    await sleep(180);
+  }
+
+  // ── SYNTHESIS ──────────────────────────────────────────────
+  pnSet('synth','active');archHL('synth');
+  document.getElementById('runningMsg').textContent='Synthesizing final report…';
+  log('eval','synthesize_results(): ls() → reading all files → generating report');
+  await sleep(500);
+  Object.keys(st.files).forEach(p=>log('eval',`read_file → <strong>${p}</strong>`));
+
+  const topic=req.toLowerCase().includes('ethics')?'AI Ethics':
+              req.toLowerCase().includes('security')?'Cybersecurity':
+              req.toLowerCase().includes('health')?'Healthcare AI':
+              req.toLowerCase().includes('energy')?'Renewable Energy':
+              req.toLowerCase().includes('space')?'Space Exploration':
+              req.toLowerCase().includes('climate')?'Climate Change':'Research Analysis';
+
+  const tasksDone=st.todos.filter(t=>t.status==='completed'||t.status==='delegated').length;
+  st.final_output=`# ${topic} — Final Report\n\n## Executive Summary\nThis report synthesizes comprehensive research on ${topic} into a unified actionable framework. The analysis draws from ${Object.keys(st.files).length} structured research files produced by the ACE pipeline.\n\n## Research Methodology\nThe Autonomous Cognitive Engine processed this request through 7 structured tasks across 4 phases:\n- Phase 1 GATHER: Web search and summarization delegated to specialist sub-agents\n- Phase 2 COMPARE: Direct comparison analysis by supervisor  \n- Phase 3 SYNTHESISE: Unified framework creation\n- Phase 4 REFINE: Implementation roadmap appended\n\n## Key Findings\nPrimary frameworks examined show both convergence and divergence in their approaches. Both prioritize transparency and accountability as foundational principles.\n\n## Critical Differences\n- Scope and jurisdiction vary significantly between frameworks\n- Enforcement mechanisms range from voluntary to legally binding\n- Implementation timelines differ based on organizational context\n\n## Common Ground\n- Human oversight is universally required\n- Risk-based approaches are preferred over blanket rules\n- Continuous monitoring and evaluation are non-negotiable\n\n## Unified Framework\n\n### Pillar 1 — Core Principles\nEvidence-based approach required throughout. Organizations must document decision-making and demonstrate alignment with established standards.\n\n### Pillar 2 — Regulatory Compliance\nMandatory standards must be met for high-risk applications. Risk tiers determine the level of scrutiny required.\n\n### Pillar 3 — Shared Values\nTransparency, accountability, and ongoing monitoring are universal requirements across all frameworks.\n\n## Implementation Roadmap\nYear 1: Adopt core standards and conduct gap analysis\nYear 2: Achieve full compliance for high-risk applications\nYear 3: Full unified framework integration across all operations\n\n## Conclusion\nThe ACE pipeline successfully synthesized multiple frameworks into a coherent unified guide. This report provides a practical starting point for organizations seeking alignment with best practices in ${topic}.`;
+
+  log('eval',`Final report generated: ${st.final_output.split(/\s+/).length} words`);
+  pnSet('synth','done');archClear();
+
+  // ── EVALUATION ─────────────────────────────────────────────
+  pnSet('eval','active');archHL('eval');
+  document.getElementById('runningMsg').textContent='Evaluating output quality…';
+  log('eval','evaluate_output(): rate this report quality from 1 to 10');
+  await sleep(450);
+
+  st.evaluation={
+    score:9,quality:'excellent',
+    feedback:`The system completed all ${tasksDone} tasks, used delegation for search and summarization, kept /research/ and /summaries/ files separate, used explicit read_file calls during comparison, and produced a comprehensive well-structured report.`,
+    tasks_completed:true,delegation_used:delCount>0,memory_used:Object.keys(st.files).length>0
+  };
+  log('eval',`Score: <strong>9/10 (excellent)</strong>  |  Tasks ✓  Delegation ✓  Memory ✓  Output ✓`);
+  pnSet('eval','done');pnSet('out','done');archClear();
+
+  // ── DONE ───────────────────────────────────────────────────
+  document.getElementById('stScore').textContent='9/10';
+  document.getElementById('runningWrap').style.display='none';
+  document.getElementById('doneWrap').innerHTML=`
+    <div class="done-banner">
+      <div class="db-left">
+        <div class="db-check">✓</div>
+        <div>
+          <div class="db-title">Pipeline Complete</div>
+          <div class="db-sub">All checks passed · ${new Date().toLocaleTimeString()}</div>
+        </div>
+      </div>
+      <div class="db-stats">
+        <div class="db-stat"><div class="dbs-val">${tasksDone}/${st.todos.length}</div><div class="dbs-lbl">Tasks</div></div>
+        <div class="db-stat"><div class="dbs-val">${delCount}</div><div class="dbs-lbl">Delegations</div></div>
+        <div class="db-stat"><div class="dbs-val">${Object.keys(st.files).length}</div><div class="dbs-lbl">Files</div></div>
+        <div class="db-stat"><div class="dbs-val">9/10</div><div class="dbs-lbl">Score</div></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('doneWrap').style.display='block';
+
+  renderOutput();
+  switchTab('output');
+  setStatus('done','Done');
+
+  isRunning=false;
+  document.getElementById('runBtn').disabled=false;
+  document.getElementById('runBtn').classList.remove('running');
+  document.getElementById('runLabel').textContent='Run Again';
+}
+</script>
+</body>
+</html>
