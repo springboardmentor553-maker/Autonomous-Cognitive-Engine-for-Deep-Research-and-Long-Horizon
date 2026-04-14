@@ -515,10 +515,3 @@ This project is licensed under the MIT License.
 
 ---
 
-## 🙏 Acknowledgements
-
-- **Infosys Springboard** for the project framework and mentor guidance
-- **LangChain / LangGraph** for the agent orchestration framework
-- **Groq** for fast LLM inference
-- **Tavily** for web search capabilities
-- **LangSmith** for observability and tracing
