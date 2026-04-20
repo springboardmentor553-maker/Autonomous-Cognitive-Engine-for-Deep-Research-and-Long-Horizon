@@ -12,12 +12,14 @@ import re
 from pathlib import Path
 from datetime import datetime
 from langchain_core.messages import HumanMessage
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Disable LangSmith tracing
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL",    "llama3.2:1b")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # ── Virtual File System ────────────────────────────────────────────────────────
 FS_DIR = Path("virtual_fs")
@@ -98,21 +100,20 @@ def log_delegation(from_agent, to_agent, task):
     print(f"  {'─'*62}")
 
 # ── LLM factory ───────────────────────────────────────────────────────────────
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage
 
-def make_llm(temperature=0.7, num_predict=300):
-    return ChatOllama(
-        model=OLLAMA_MODEL,
-        base_url=OLLAMA_BASE_URL,
+def make_llm(temperature=0.7, max_tokens=300):
+    return ChatOpenAI(
+        model=OPENAI_MODEL,
         temperature=temperature,
-        num_predict=num_predict
+        max_tokens=max_tokens
     )
 
 # ── SUPERVISOR ─────────────────────────────────────────────────────────────────
 def supervisor(user_task):
     print(f"\n{'═'*65}")
-    print("  🛡️  SUPERVISOR  — Orchestrating the full research workflow")
+    print(f"  🛡️  SUPERVISOR  — Orchestrating the full research workflow")
     print(f"{'═'*65}")
 
     slug = _slug(user_task)
@@ -145,7 +146,7 @@ def supervisor(user_task):
          "output": filenames["review"], "status": "pending"},
     ]
 
-    print("\n  📋 TODO LIST — 5 steps planned:")
+    print(f"\n  📋 TODO LIST — 5 steps planned:")
     for t in todos:
         print(f"     [{t['id']}] {t['step']:<20}  →  {t['output']}")
         print(f"          {t['description']}")
@@ -186,11 +187,11 @@ def supervisor(user_task):
 # ── RESEARCHER ─────────────────────────────────────────────────────────────────
 def researcher(user_task, filenames):
     print(f"\n{'═'*65}")
-    print("  🔬 RESEARCHER  — Gathering information across 3 research phases")
-    print("  Strategy : Single LLM call → split into 3 named output files")
+    print(f"  🔬 RESEARCHER  — Gathering information across 3 research phases")
+    print(f"  Strategy : Single LLM call → split into 3 named output files")
     print(f"{'═'*65}")
 
-    llm = make_llm(temperature=0.7, num_predict=350)
+    llm = make_llm(temperature=0.7, max_tokens=350)
 
     response = llm.invoke([
         SystemMessage(content=(
@@ -239,13 +240,13 @@ def researcher(user_task, filenames):
             text = f"{labels[key]} for: {user_task}\n(Content not separately parsed — see full research output.)"
         fs_write(fname, text)
 
-    print("\n  ✓ Research complete — 3 files written to virtual_fs/")
+    print(f"\n  ✓ Research complete — 3 files written to virtual_fs/")
 
 # ── WRITER ─────────────────────────────────────────────────────────────────────
 def writer(user_task, filenames):
     print(f"\n{'═'*65}")
-    print("  ✍️  WRITER     — Reading research files and composing final report")
-    print("  Strategy : Reads all 3 research files → produces 1 structured report")
+    print(f"  ✍️  WRITER     — Reading research files and composing final report")
+    print(f"  Strategy : Reads all 3 research files → produces 1 structured report")
     print(f"{'═'*65}")
 
     research_content = ""
@@ -254,7 +255,7 @@ def writer(user_task, filenames):
         print(f"     📖 Reading : {fname}")
         research_content += f"\n[{fname}]\n" + fs_read(fname)[:220] + "\n"
 
-    llm = make_llm(temperature=0.7, num_predict=400)
+    llm = make_llm(temperature=0.7, max_tokens=400)
     response = llm.invoke([
         SystemMessage(content=(
             "You are a professional report writer. Produce a clear, well-structured report. "
@@ -278,15 +279,15 @@ def writer(user_task, filenames):
 # ── REVIEWER ───────────────────────────────────────────────────────────────────
 def reviewer(filenames):
     print(f"\n{'═'*65}")
-    print("  🔍 REVIEWER   — Evaluating the final report for quality assurance")
-    print("  Strategy : Reads final report → returns structured verdict")
+    print(f"  🔍 REVIEWER   — Evaluating the final report for quality assurance")
+    print(f"  Strategy : Reads final report → returns structured verdict")
     print(f"{'═'*65}")
 
     report_fname = filenames["report"]
     print(f"     📖 Reading : {report_fname}")
     report = fs_read(report_fname)[:500]
 
-    llm = make_llm(temperature=0.3, num_predict=150)
+    llm = make_llm(temperature=0.3, max_tokens=150)
     response = llm.invoke([
         SystemMessage(content=(
             "You are a quality reviewer. Assess the report on completeness, clarity, and structure. "
@@ -303,8 +304,8 @@ def run(user_task: str):
     start = time.time()
 
     print(f"\n{'═'*65}")
-    print("🚀 MILESTONE 4 — Multi-Agent Research Pipeline")
-    print(f"  Model  : {OLLAMA_MODEL}")
+    print(f"  🚀 MILESTONE 4 — Multi-Agent Research Pipeline")
+    print(f"  Model  : {OPENAI_MODEL}")
     print(f"  Task   : {user_task[:60]}")
     print(f"  FS Dir : {FS_DIR.absolute()}")
     print(f"{'═'*65}")
@@ -322,7 +323,7 @@ def run(user_task: str):
     print(f"  ✅ PIPELINE COMPLETE  ({elapsed:.1f}s)")
     print(f"{'═'*65}")
 
-    print("\n  📋 TODO STATUS — all 5 steps completed:")
+    print(f"\n  📋 TODO STATUS — all 5 steps completed:")
     for t in todos:
         print(f"     [✓] Step {t['id']}: {t['step']:<20}  →  {t['output']}")
 
