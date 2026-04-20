@@ -1,5 +1,5 @@
 """
-Milestone 1 Test Suite — Ollama (llama3)
+Milestone 1 Test Suite — OpenAI
 """
 import os
 import sys
@@ -9,11 +9,9 @@ from workflow.flow import create_agent_executor, create_system_prompt
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"]    = "milestone1-refinement"
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL",    "llama3")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-print(f"✓ Ollama URL: {OLLAMA_BASE_URL}")
-print(f"✓ Model:      {OLLAMA_MODEL}")
+print(f"✓ OpenAI Model: {OPENAI_MODEL}")
 
 TEST_CASES = [
     {"id": 1, "input": "Create a comprehensive business plan for a sustainable urban farming startup",          "category": "Business Planning"},
@@ -58,7 +56,7 @@ def run_tests():
     print("=" * 90)
     print("MILESTONE 1 — COMPREHENSIVE TEST SUITE")
     print("=" * 90)
-    print(f"Model: {OLLAMA_MODEL} | Tests: {len(TEST_CASES)}")
+    print(f"Model: {OPENAI_MODEL} | Tests: {len(TEST_CASES)}")
     print("=" * 90)
 
     agent         = create_agent_executor()
