@@ -1,12 +1,14 @@
 """
-Writer Agent - Ollama (llama3.2:1b)
+Writer Agent - OpenAI
 """
-from langchain_ollama import ChatOllama
+import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from pathlib import Path
 
-OLLAMA_MODEL    = "llama3.2:1b"
-OLLAMA_BASE_URL = "http://localhost:11434"
+load_dotenv()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 FS_DIR          = Path("virtual_fs")
 FS_DIR.mkdir(exist_ok=True)
 
@@ -21,8 +23,8 @@ def _list():
     return [f.name for f in FS_DIR.iterdir() if f.is_file()]
 
 def create_writer():
-    llm = ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL,
-                     temperature=0.7, num_predict=400)  # hard cap at 400 tokens
+    llm = ChatOpenAI(model=OPENAI_MODEL,
+                     temperature=0.7, max_tokens=400)
 
     system_message = "You are a professional writer. Write a concise, well-structured report. Be brief and clear."
 
