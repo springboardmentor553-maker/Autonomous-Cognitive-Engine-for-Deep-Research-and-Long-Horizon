@@ -1,5 +1,5 @@
 """
-Plan Validation: Unified Workflow ( Milestone 2) — Ollama (llama3)
+Plan Validation: Unified Workflow (Milestone 1 + Milestone 2) — OpenAI
 Tests planning + file-based context offloading across 5 task scenarios.
 Success Criteria: >80% pass rate.
 """
@@ -15,11 +15,9 @@ from brains.filetools import clear_virtual_fs, FILE_SYSTEM_DIR, get_fs_stats
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_PROJECT"]    = "milestone2-multi-prompt"
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL",    "llama3")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-print(f"✓ Ollama URL:  {OLLAMA_BASE_URL}")
-print(f"✓ Model:       {OLLAMA_MODEL}")
+print(f"✓ OpenAI Model: {OPENAI_MODEL}")
 print(f"✓ LangSmith tracing ENABLED — project: milestone2-multi-prompt")
 print(f"✓ Storage: {FILE_SYSTEM_DIR.absolute()}\n")
 
