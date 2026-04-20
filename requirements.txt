@@ -1,29 +1,19 @@
-# ============================================
-# CORE LANGCHAIN & LANGGRAPH
-# ============================================
-langchain>=0.3.0
+# Aether ResearchBot — Python dependencies
+# Install with: pip install -r requirements.txt
+
+# LangChain core
 langchain-core>=0.3.0
-langchain-community>=0.3.0
-langchain-groq>=0.2.0
+langchain-openai>=0.3.0
 langgraph>=0.2.0
 
-# ============================================
-# UI & FRONTEND
-# ============================================
-streamlit>=1.30.0
+# Flask backend
+flask>=3.0.0
+flask-cors>=4.0.0
+flask-sqlalchemy>=3.1.0
 
-# ============================================
-# API & ENVIRONMENT
-# ============================================
+# Utilities
 python-dotenv>=1.0.0
 requests>=2.31.0
 
-# ============================================
-# OBSERVABILITY & DEBUGGING
-# ============================================
-langsmith>=0.1.0
-
-# ============================================
-# UTILITIES & VALIDATION
-# ============================================
-pydantic>=2.0.0
+# Web Search
+tavily-python>=0.5.0
