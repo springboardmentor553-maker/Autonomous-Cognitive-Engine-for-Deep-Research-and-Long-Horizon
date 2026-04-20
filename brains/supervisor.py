@@ -1,5 +1,5 @@
 """
-Supervisor Agent - Ollama (llama3)
+Supervisor Agent - Hardcoded Routing
 Hardcoded routing - no LLM calls needed, saves tokens.
 """
 
