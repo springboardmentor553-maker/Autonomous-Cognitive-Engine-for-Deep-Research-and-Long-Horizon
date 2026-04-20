@@ -1,12 +1,14 @@
 """
-Reviewer Agent - Ollama (llama3.2:1b)
+Reviewer Agent - OpenAI
 """
-from langchain_ollama import ChatOllama
+import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from pathlib import Path
 
-OLLAMA_MODEL    = "llama3.2:1b"
-OLLAMA_BASE_URL = "http://localhost:11434"
+load_dotenv()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 FS_DIR          = Path("virtual_fs")
 FS_DIR.mkdir(exist_ok=True)
 
@@ -18,8 +20,8 @@ def _read(filename):
     return p.read_text(encoding="utf-8") if p.exists() else "No report found"
 
 def create_reviewer():
-    llm = ChatOllama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL,
-                     temperature=0.3, num_predict=200)  # hard cap at 200 tokens
+    llm = ChatOpenAI(model=OPENAI_MODEL,
+                     temperature=0.3, max_tokens=200)
 
     system_message = "You are a quality reviewer. Give a brief review in 3-5 sentences. End with: Verdict: Approved or Verdict: Needs Revision."
 
